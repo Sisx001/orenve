@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { api, errorText, BASE } from '../lib/api';
 import { toast } from 'sonner';
 
@@ -7,6 +7,12 @@ const read = (key, fallback) => { try { return JSON.parse(localStorage.getItem(k
 export const StoreProvider = ({ children }) => {
   const [store, setStore] = useState(null), [error, setError] = useState('');
   const [preview] = useState(new URLSearchParams(window.location.search).get('preview'));
+  const [themePreference,setThemePreference]=useState(()=>{const saved=preview?null:read('orynve-theme',null);return saved==='dark'||saved==='light'?saved:null;});
+  const theme=themePreference||(store?.brand.theme==='dark'?'dark':'light');
+  const setTheme=useCallback(next=>{if(!['light','dark'].includes(next))return;setThemePreference(next);if(!preview){try{localStorage.setItem('orynve-theme',JSON.stringify(next));}catch{/* Keep the choice for this visit when storage is restricted. */}}},[preview]);
+  useLayoutEffect(()=>{const root=document.documentElement;root.dataset.brandTheme=theme;root.classList.toggle('dark',theme==='dark');root.style.colorScheme=theme;const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==='dark'?'#131710':'#faf9f6';},[theme]);
+  useEffect(()=>{if(preview)return;const sync=e=>{if(e.key==='orynve-theme'){try{const next=JSON.parse(e.newValue);setThemePreference(next==='dark'||next==='light'?next:null);}catch{setThemePreference(null);}}};window.addEventListener('storage',sync);return()=>window.removeEventListener('storage',sync);},[preview]);
+  useEffect(()=>()=>{const root=document.documentElement;delete root.dataset.brandTheme;delete root.dataset.spacing;root.classList.remove('dark');root.style.removeProperty('color-scheme');root.style.removeProperty('--font-body');root.style.removeProperty('--accent-brand');},[]);
   const [cart, setCart] = useState(() => read('orynve-bag', []));
   const [wishlist, setWishlist] = useState(() => read('orynve-wishlist', []));
   const [currency, setCurrency] = useState(() => read('orynve-currency', 'BDT'));
@@ -29,9 +35,8 @@ export const StoreProvider = ({ children }) => {
     if (store && !store.currencies.some(c => c.code === currency && c.enabled)) setCurrency('BDT');
     if (store) {
       document.documentElement.style.setProperty('--accent-brand', store.brand.accent);
-      document.documentElement.dataset.brandTheme = store.brand.theme;
       document.documentElement.dataset.spacing = store.brand.spacing;
-      document.documentElement.style.setProperty('--font-body', `${store.brand.font || 'Manrope'}, sans-serif`);
+      document.documentElement.style.setProperty('--font-body', `${store.brand.font || 'Outfit'}, sans-serif`);
     }
   }, [store,currency]);
   const money = (value, code=currency) => {
@@ -49,7 +54,7 @@ export const StoreProvider = ({ children }) => {
     setQuickView(null); setCartOpen(true); toast.success('A considered choice. Added to your bag.'); return true;
   };
   const toggleWish = (id) => setWishlist(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
-  const value = {store,error,load,preview,cart,setCart,wishlist,toggleWish,currency,setCurrency,money,cartOpen,setCartOpen,searchOpen,setSearchOpen,quickView,setQuickView,addToCart};
+  const value = {store,error,load,preview,theme,setTheme,cart,setCart,wishlist,toggleWish,currency,setCurrency,money,cartOpen,setCartOpen,searchOpen,setSearchOpen,quickView,setQuickView,addToCart};
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 };
 export const useStore = () => useContext(StoreContext);

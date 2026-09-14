@@ -28,6 +28,19 @@
         Learn how to configure a non-root public URL by running `npm run build`.
         -->
         <title>ORYNVE — Quiet rebellion. Considered menswear.</title>
+        <script>
+            // Apply a remembered visitor preference before the first paint.
+            // The private owner studio intentionally remains its own light workspace.
+            try {
+                if (!window.location.pathname.startsWith('/admin') && !new URLSearchParams(window.location.search).has('preview')) {
+                    const theme = JSON.parse(localStorage.getItem('orynve-theme'));
+                    if (theme === 'light' || theme === 'dark') {
+                        document.documentElement.dataset.brandTheme = theme;
+                        document.documentElement.style.colorScheme = theme;
+                    }
+                }
+            } catch (_) {}
+        </script>
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
         <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
     </head>

@@ -5,6 +5,7 @@ import { useStore } from '../context/StoreContext';
 import { OLink, TextLink, Reveal, Image, SEO } from '../components/store/Common';
 import { ProductCard } from '../components/store/ProductCard';
 import { imgUrl } from '../lib/api';
+import { useBrandEntrance } from '../components/store/BrandIntro';
 
 const Hero = () => {
   const {store}=useStore(),h=store.hero;const ref=useRef(null);const [slide,setSlide]=useState(0);const reduced=useReducedMotion();
@@ -28,4 +29,4 @@ export const LookbookSection = ({section:s,full=false}) => {
 
 const Manifesto = ({section:s}) => <section className="manifesto section-pad" data-testid={`section-${s.id}`}><Reveal><span className="eyebrow">05 / AN INDEPENDENT POINT OF VIEW</span><h2>{s.title.split('\n').map((l,i)=><span key={i} className={i?'manifesto-serif':''}>{l}</span>)}</h2><p>{s.subtitle}</p><TextLink to="/about" testId={`${s.id}-about`}>THIS IS ORYNVE</TextLink></Reveal></section>;
 
-export default function Home(){const {store}=useStore();return <><SEO/><Hero/><div className={`brand-marquee ${!store.features.animations?'no-motion':''}`} aria-hidden="true"><div>{Array.from({length:4},(_,i)=><span key={i}>INDEPENDENT IN SPIRIT <i>✳</i> CONSIDERED BY DESIGN <i>✳</i> NOT FOR EVERYONE. FOR YOU. <i>✳</i></span>)}</div></div>{store.sections.filter(s=>s.enabled).map(s=>s.type==='featured'?<ProductSection key={s.id} section={s}/>:s.type==='arrivals'?<ProductSection key={s.id} section={s} arrivals/>:s.type==='editorial'?<Editorial key={s.id} section={s}/>:s.type==='lookbook'?<LookbookSection key={s.id} section={s}/>:s.type==='manifesto'?<Manifesto key={s.id} section={s}/>:null)}</>;}
+export default function Home(){const {store}=useStore();const entrance=useBrandEntrance();return <><SEO/><Hero key={entrance?'revealed':'waiting'}/><div className={`brand-marquee ${!store.features.animations?'no-motion':''}`} aria-hidden="true"><div>{Array.from({length:4},(_,i)=><span key={i}>INDEPENDENT IN SPIRIT <i>✳</i> CONSIDERED BY DESIGN <i>✳</i> NOT FOR EVERYONE. FOR YOU. <i>✳</i></span>)}</div></div>{store.sections.filter(s=>s.enabled).map(s=>s.type==='featured'?<ProductSection key={s.id} section={s}/>:s.type==='arrivals'?<ProductSection key={s.id} section={s} arrivals/>:s.type==='editorial'?<Editorial key={s.id} section={s}/>:s.type==='lookbook'?<LookbookSection key={s.id} section={s}/>:s.type==='manifesto'?<Manifesto key={s.id} section={s}/>:null)}</>;}

@@ -4,6 +4,7 @@ def image(id, width=1400):
 def initial_store():
     store = _build_initial_store()
     store['hero']['position'] = '50% 0%'
+    store['brand']['font'] = 'Outfit'
     for p in store['products']:
         if p['id'] in ('p003','p006'):
             p['collection'] = 'everyday-elevated'
