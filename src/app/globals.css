@@ -1,0 +1,260 @@
+/* Fonts are loaded at runtime so builds never depend on network access.
+   Fraunces (display serif), Space Grotesk (sans), Hind Siliguri (Bangla). */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Space+Grotesk:wght@300..700&family=Hind+Siliguri:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ───────────────────────── Design tokens ─────────────────────────
+   RGB triplets so Tailwind can apply alpha. Overridable at runtime
+   from the studio via <html style="--c-oxide: …"> (see ThemeStyle). */
+:root {
+  --c-ink: 14 15 12; /* #0e0f0c */
+  --c-bone: 243 239 230; /* #f3efe6 */
+  --c-paper: 250 248 243; /* #faf8f3 */
+  --c-line: 216 211 199; /* #d8d3c7 */
+  --c-muted: 112 111 104; /* #706f68 */
+  --c-oxide: 194 84 43; /* #c2542b  brand accent */
+  --c-brass: 201 162 92; /* #c9a25c */
+  --c-olive: 62 68 50; /* #3e4432 */
+  --c-success: 46 125 75;
+  --c-danger: 185 52 43;
+  --c-warning: 190 130 30;
+
+  --fg: var(--c-ink);
+  --bg: var(--c-paper);
+  --bg-elev: 255 255 255;
+
+  --font-display: "Fraunces";
+  --font-sans: "Space Grotesk";
+  --font-bangla: "Hind Siliguri";
+
+  --gutter: clamp(1rem, 4vw, 4rem);
+  --section-gap: clamp(4rem, 9vw, 11rem);
+  --page-max: 1680px;
+  --radius: 2px;
+  --header-h: 72px;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --c-paper: 14 15 12;
+  --c-bone: 22 23 20;
+  --c-line: 48 49 44;
+  --c-muted: 158 156 148;
+  --fg: 243 239 230;
+  --bg: 14 15 12;
+  --bg-elev: 22 23 20;
+  color-scheme: dark;
+}
+
+/* Bangla locale swaps the body face; display serif stays for latin numerals/brand. */
+[lang="bn"] {
+  --font-sans: "Hind Siliguri";
+  --font-display: "Hind Siliguri";
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --page-max: 1920px;
+    --header-h: 84px;
+  }
+  html {
+    font-size: 17px;
+  }
+}
+@media (min-width: 2560px) {
+  :root {
+    --page-max: 2400px;
+    --gutter: 5rem;
+    --header-h: 100px;
+  }
+  html {
+    font-size: 20px;
+  }
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: rgb(var(--c-line));
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: calc(var(--header-h) + 1rem);
+  }
+  body {
+    margin: 0;
+    background: rgb(var(--bg));
+    color: rgb(var(--fg));
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100dvh;
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+  button {
+    cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  img,
+  video {
+    display: block;
+    max-width: 100%;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  p {
+    margin: 0;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-oxide));
+    outline-offset: 4px;
+    border-radius: 2px;
+  }
+  ::selection {
+    background: rgb(var(--c-oxide));
+    color: #fff;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: var(--page-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  .section {
+    padding-block: var(--section-gap);
+  }
+  .eyebrow {
+    @apply font-sans text-eyebrow font-medium uppercase tracking-[0.18em] text-muted;
+  }
+  .display {
+    font-family: var(--font-display), Georgia, serif;
+    font-variation-settings: "opsz" 144;
+    font-weight: 400;
+  }
+  .display-italic {
+    font-family: var(--font-display), Georgia, serif;
+    font-style: italic;
+    font-weight: 300;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 border border-ink bg-ink px-6 py-3.5 font-sans text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-paper transition duration-300 ease-editorial hover:bg-oxide hover:border-oxide;
+  }
+  [data-theme="dark"] .btn {
+    @apply border-bone bg-bone text-ink hover:bg-oxide hover:border-oxide hover:text-paper;
+  }
+  .btn-outline {
+    @apply btn bg-transparent text-ink hover:bg-ink hover:text-paper;
+  }
+  [data-theme="dark"] .btn-outline {
+    @apply bg-transparent text-bone hover:bg-bone hover:text-ink;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 font-sans text-[0.7rem] font-semibold uppercase tracking-[0.16em] underline-offset-[6px] hover:underline;
+  }
+  .btn-accent {
+    @apply btn border-oxide bg-oxide text-paper hover:bg-ink hover:border-ink;
+  }
+  .field {
+    @apply w-full border-0 border-b border-line bg-transparent px-0 py-3 text-base outline-none transition placeholder:text-muted/70 focus:border-oxide;
+  }
+  .field-box {
+    @apply w-full border border-line bg-paper px-3.5 py-2.5 text-sm outline-none transition focus:border-oxide;
+  }
+  .card {
+    @apply border border-line bg-paper;
+  }
+  .hairline {
+    @apply h-px w-full bg-line;
+  }
+  .prose-editorial p + p {
+    margin-top: 1.25em;
+  }
+  .prose-editorial h2 {
+    @apply display mt-12 mb-4 text-display-sm;
+  }
+  .prose-editorial h3 {
+    @apply mt-8 mb-3 text-lg font-semibold;
+  }
+  .prose-editorial ul {
+    @apply my-4 list-disc pl-6;
+  }
+  .prose-editorial a {
+    @apply underline decoration-oxide underline-offset-4;
+  }
+  .skeleton {
+    @apply animate-shimmer bg-[linear-gradient(90deg,rgb(var(--c-bone))_0%,rgb(var(--bg-elev))_50%,rgb(var(--c-bone))_100%)] bg-[length:200%_100%];
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.08;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .mask-fade-x {
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* View transitions between routes (progressive enhancement) */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.35s;
+}
