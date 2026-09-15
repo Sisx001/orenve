@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 64" fill="none" stroke="#0e0f0c" stroke-width="6.5" stroke-linecap="square" stroke-linejoin="miter">
+  <title>ORYNVE</title>
+  <!-- monogram -->
+  <g transform="translate(0,0)" stroke-width="5.5">
+    <path d="M46.5 14.5A22 22 0 1 0 51 42"/>
+    <path d="M38 50L58 10" stroke="#c2542b"/>
+  </g>
+  <!-- wordmark -->
+  <g transform="translate(80,0)">
+    <path d="M30 6C15 6 7 16 7 32S15 58 30 58S53 48 53 32S45 6 30 6Z"/>
+    <path transform="translate(60,0)" d="M9 58V6H30C43 6 50 12 50 22S43 38 30 38H9M31 38L52 58"/>
+    <path transform="translate(120,0)" d="M6 6L29 34L52 6M29 34V58"/>
+    <path transform="translate(180,0)" d="M9 58V6L50 58V6"/>
+    <path transform="translate(240,0)" d="M6 6L29 58L52 6"/>
+    <circle cx="269" cy="58" r="3.4" fill="#c2542b" stroke="none"/>
+    <path transform="translate(300,0)" d="M50 6H9V58H50M9 32H42"/>
+  </g>
+</svg>
