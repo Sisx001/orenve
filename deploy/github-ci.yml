@@ -1,0 +1,61 @@
+# Copy this file to .github/workflows/ci.yml to enable CI on GitHub Actions.
+# (It ships under deploy/ because the token used to push v2 cannot write workflow files.)
+name: CI
+
+on:
+  push:
+    branches: ["main", "develop", "v2"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  ci:
+    name: Type-check, lint, and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client (SQLite for CI)
+        env:
+          DATABASE_PROVIDER: sqlite
+          DATABASE_URL: file:./data/ci.db
+        run: |
+          node scripts/db-provider.mjs
+          npx prisma generate
+
+      - name: Type check
+        env:
+          DATABASE_PROVIDER: sqlite
+          DATABASE_URL: file:./data/ci.db
+          SESSION_SECRET: ci-dummy-session-secret-not-for-production-use
+          APP_URL: http://localhost:3000
+        run: npm run typecheck
+
+      - name: Lint
+        env:
+          DATABASE_PROVIDER: sqlite
+          DATABASE_URL: file:./data/ci.db
+          SESSION_SECRET: ci-dummy-session-secret-not-for-production-use
+          APP_URL: http://localhost:3000
+        run: npm run lint
+
+      - name: Build
+        env:
+          DATABASE_PROVIDER: sqlite
+          DATABASE_URL: file:./data/ci.db
+          SESSION_SECRET: ci-dummy-session-secret-not-for-production-use
+          APP_URL: http://localhost:3000
+          DEPLOY_TARGET: standalone
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build

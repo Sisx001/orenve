@@ -1,0 +1,14 @@
+.git
+.github
+.next
+node_modules
+backups
+prisma/data
+public/uploads
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+*.md
+deploy
+docs
