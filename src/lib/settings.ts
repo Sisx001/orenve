@@ -1,0 +1,212 @@
+import "server-only";
+import { cache } from "react";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import { parseJson, toJson } from "@/lib/json";
+
+/**
+ * Typed settings stored as JSON rows in `Setting`. Every group has a Zod schema
+ * with defaults, so a missing or partial row always yields a complete object.
+ */
+export const brandSchema = z.object({
+  name: z.string().default("ORYNVE"),
+  tagline: z.record(z.string()).default({ en: "Not for everyone. For you.", bn: "সবার জন্য নয়। আপনার জন্য।" }),
+  logoUrl: z.string().nullable().default(null), // custom raster/SVG upload; null = built-in mark
+  accent: z.string().default("#c2542b"),
+  brass: z.string().default("#c9a25c"),
+  theme: z.enum(["light", "dark", "system"]).default("light"),
+  radius: z.number().min(0).max(24).default(2),
+  fontDisplay: z.string().default("Fraunces"),
+  fontSans: z.string().default("Space Grotesk"),
+  fontBangla: z.string().default("Hind Siliguri"),
+  announcement: z.record(z.string()).default({ en: "Collection 001 is live — free delivery in Dhaka over ৳5,000", bn: "কালেকশন ০০১ এখন লাইভ — ঢাকায় ৳৫,০০০ এর উপরে ফ্রি ডেলিভারি" }),
+  announcementLink: z.string().default("/shop"),
+  showAnnouncement: z.boolean().default(true),
+});
+
+export const contactSchema = z.object({
+  whatsapp: z.string().default(""), // E.164 without +, e.g. 8801XXXXXXXXX
+  messengerPage: z.string().default(""), // m.me/<page>
+  instagram: z.string().default(""),
+  facebook: z.string().default(""),
+  tiktok: z.string().default(""),
+  email: z.string().default(""),
+  phone: z.string().default(""),
+  address: z.record(z.string()).default({ en: "Dhaka, Bangladesh", bn: "ঢাকা, বাংলাদেশ" }),
+  hours: z.record(z.string()).default({ en: "Sat–Thu, 10:00–20:00", bn: "শনি–বৃহঃ, সকাল ১০টা – রাত ৮টা" }),
+  mapUrl: z.string().default(""),
+});
+
+export const featuresSchema = z.object({
+  cart: z.boolean().default(true),
+  wishlist: z.boolean().default(true),
+  search: z.boolean().default(true),
+  reviews: z.boolean().default(true),
+  quickView: z.boolean().default(true),
+  newsletter: z.boolean().default(true),
+  intro: z.boolean().default(true), // first-visit brand intro
+  animations: z.boolean().default(true),
+  customCursor: z.boolean().default(true),
+  darkModeToggle: z.boolean().default(true),
+  languageSwitcher: z.boolean().default(true),
+  currencySwitcher: z.boolean().default(true),
+  aiConcierge: z.boolean().default(true),
+  orderTracking: z.boolean().default(true),
+  coupons: z.boolean().default(true),
+  sizeGuide: z.boolean().default(true),
+  stockBadges: z.boolean().default(true),
+  backInStockNotify: z.boolean().default(false),
+  productVideo: z.boolean().default(true),
+  socialProof: z.boolean().default(true),
+  pwa: z.boolean().default(true),
+});
+
+export const checkoutSchema = z.object({
+  whatsapp: z.boolean().default(true),
+  messenger: z.boolean().default(false),
+  website: z.boolean().default(true), // on-site checkout form
+  cod: z.boolean().default(true),
+  bkash: z.boolean().default(true),
+  nagad: z.boolean().default(true),
+  sslcommerz: z.boolean().default(false),
+  stripe: z.boolean().default(false),
+  bkashNumber: z.string().default(""),
+  nagadNumber: z.string().default(""),
+  mfsInstructions: z.record(z.string()).default({
+    en: "Send Money to the number above, then enter the Transaction ID (TrxID) below. We verify within business hours.",
+    bn: "উপরের নম্বরে সেন্ড মানি করুন, তারপর নিচে ট্রানজ্যাকশন আইডি (TrxID) দিন। আমরা অফিস সময়ের মধ্যে যাচাই করি।",
+  }),
+  requireEmail: z.boolean().default(false),
+  guestCheckout: z.boolean().default(true),
+  minOrder: z.number().int().default(0),
+  notesEnabled: z.boolean().default(true),
+  whatsappTemplate: z.record(z.string()).default({
+    en: "Hello ORYNVE, I would like to order:\n\n{items}\n\nSubtotal: {subtotal}\nReference: {reference}\n{notes}",
+    bn: "হ্যালো ORYNVE, আমি অর্ডার করতে চাই:\n\n{items}\n\nসাবটোটাল: {subtotal}\nরেফারেন্স: {reference}\n{notes}",
+  }),
+  autoConfirmCod: z.boolean().default(false),
+});
+
+export const currencySchema = z.object({
+  base: z.literal("BDT").default("BDT"),
+  display: z
+    .array(
+      z.object({
+        code: z.string().length(3),
+        symbol: z.string(),
+        rate: z.number().positive(), // units per 1 BDT
+        enabled: z.boolean(),
+        decimals: z.number().int().min(0).max(2),
+      }),
+    )
+    .default([
+      { code: "BDT", symbol: "৳", rate: 1, enabled: true, decimals: 0 },
+      { code: "USD", symbol: "$", rate: 0.0082, enabled: true, decimals: 2 },
+      { code: "EUR", symbol: "€", rate: 0.0076, enabled: true, decimals: 2 },
+      { code: "GBP", symbol: "£", rate: 0.0064, enabled: false, decimals: 2 },
+      { code: "INR", symbol: "₹", rate: 0.69, enabled: false, decimals: 0 },
+    ]),
+});
+
+export const localeSchema = z.object({
+  default: z.string().default("en"),
+  enabled: z.array(z.string()).default(["en", "bn"]),
+  autoDetect: z.boolean().default(true),
+});
+
+export const seoSchema = z.object({
+  title: z.record(z.string()).default({ en: "ORYNVE — Quiet rebellion. Considered menswear.", bn: "ORYNVE — নিঃশব্দ বিদ্রোহ। ভাবনাপূর্ণ মেনসওয়্যার।" }),
+  description: z.record(z.string()).default({
+    en: "Independent premium menswear from Dhaka. Considered silhouettes, honest materials, Collection 001.",
+    bn: "ঢাকা থেকে স্বাধীন প্রিমিয়াম মেনসওয়্যার। ভাবনাপূর্ণ সিলুয়েট, সৎ উপাদান, কালেকশন ০০১।",
+  }),
+  ogImage: z.string().default("/brand/og.jpg"),
+  twitter: z.string().default(""),
+  gaId: z.string().default(""), // optional Google Analytics 4
+  metaPixelId: z.string().default(""), // optional Meta Pixel
+  robotsIndex: z.boolean().default(true),
+});
+
+export const siteSchema = z.object({
+  mode: z.enum(["live", "maintenance", "coming_soon"]).default("live"),
+  maintenanceTitle: z.record(z.string()).default({ en: "Something considered is on its way.", bn: "কিছু ভাবনাপূর্ণ আসছে।" }),
+  maintenanceMessage: z.record(z.string()).default({ en: "We're taking a moment to make things better. Leave your email and be the first to know.", bn: "আমরা আরও ভালো করতে একটু সময় নিচ্ছি। ইমেইল দিন, প্রথমে জানুন।" }),
+  launchDate: z.string().default(""),
+  maintenanceImage: z.string().default(""),
+  allowlistIps: z.array(z.string()).default([]),
+});
+
+export const aiSchema = z.object({
+  enabled: z.boolean().default(true),
+  provider: z.enum(["openai_compatible"]).default("openai_compatible"),
+  baseUrl: z.string().default(""), // falls back to env AI_BASE_URL
+  apiKey: z.string().default(""), // falls back to env AI_API_KEY (stored encrypted-at-rest is host's job; never sent to client)
+  model: z.string().default(""), // falls back to env AI_MODEL
+  temperature: z.number().min(0).max(1).default(0.2),
+  maxTokens: z.number().int().min(64).max(4096).default(600),
+  assistantName: z.record(z.string()).default({ en: "ORYNVE Concierge", bn: "ORYNVE কনসিয়ার্জ" }),
+  greeting: z.record(z.string()).default({
+    en: "Hello — I can track your order, check sizes and stock, or answer questions about delivery and returns. How can I help?",
+    bn: "হ্যালো — আমি আপনার অর্ডার ট্র্যাক করতে, সাইজ ও স্টক দেখতে, বা ডেলিভারি ও রিটার্ন নিয়ে প্রশ্নের উত্তর দিতে পারি। কীভাবে সাহায্য করতে পারি?",
+  }),
+  extraInstructions: z.string().default(""), // owner-added brand facts, policies, tone
+  allowProductSearch: z.boolean().default(true),
+  allowOrderLookup: z.boolean().default(true),
+  requirePhoneForOrder: z.boolean().default(true),
+  maxMessagesPerSession: z.number().int().default(40),
+  rateLimitPerHour: z.number().int().default(60),
+  logConversations: z.boolean().default(true),
+  handoffWhatsapp: z.boolean().default(true),
+});
+
+export const SETTING_SCHEMAS = {
+  brand: brandSchema,
+  contact: contactSchema,
+  features: featuresSchema,
+  checkout: checkoutSchema,
+  currency: currencySchema,
+  locale: localeSchema,
+  seo: seoSchema,
+  site: siteSchema,
+  ai: aiSchema,
+} as const;
+
+export type SettingKey = keyof typeof SETTING_SCHEMAS;
+export type SettingValue<K extends SettingKey> = z.infer<(typeof SETTING_SCHEMAS)[K]>;
+
+export const getSetting = cache(async <K extends SettingKey>(key: K): Promise<SettingValue<K>> => {
+  const row = await db.setting.findUnique({ where: { key } }).catch(() => null);
+  const schema = SETTING_SCHEMAS[key];
+  const parsed = schema.safeParse(parseJson(row?.value, {}));
+  return (parsed.success ? parsed.data : schema.parse({})) as SettingValue<K>;
+});
+
+export async function getAllSettings() {
+  const keys = Object.keys(SETTING_SCHEMAS) as SettingKey[];
+  const entries = await Promise.all(keys.map(async (k) => [k, await getSetting(k)] as const));
+  return Object.fromEntries(entries) as { [K in SettingKey]: SettingValue<K> };
+}
+
+export async function saveSetting<K extends SettingKey>(key: K, value: unknown): Promise<SettingValue<K>> {
+  const data = SETTING_SCHEMAS[key].parse(value) as SettingValue<K>;
+  await db.setting.upsert({ where: { key }, update: { value: toJson(data) }, create: { key, value: toJson(data) } });
+  return data;
+}
+
+/** Public-safe subset shipped to the client (never includes secrets like AI keys). */
+export async function getPublicConfig() {
+  const [brand, contact, features, checkout, currency, locale, seo, site, ai] = await Promise.all([
+    getSetting("brand"),
+    getSetting("contact"),
+    getSetting("features"),
+    getSetting("checkout"),
+    getSetting("currency"),
+    getSetting("locale"),
+    getSetting("seo"),
+    getSetting("site"),
+    getSetting("ai"),
+  ]);
+  const { apiKey: _k, baseUrl: _b, model: _m, extraInstructions: _e, ...aiPublic } = ai;
+  return { brand, contact, features, checkout, currency, locale, seo, site, ai: aiPublic };
+}
+export type PublicConfig = Awaited<ReturnType<typeof getPublicConfig>>;
