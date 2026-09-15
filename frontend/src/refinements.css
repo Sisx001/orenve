@@ -1,6 +1,0 @@
-/* Campaign framing: keep the face and purchase actions inside their safe zones. */
-.hero-visual{mask-image:linear-gradient(90deg,transparent,black 20%)}
-.product-card-media>a{position:relative;z-index:1}.product-card-media .product-badge{z-index:2}.product-card-media .wishlist-button{z-index:3;isolation:isolate;pointer-events:auto}.product-card-media .quick-view-button{z-index:3}.product-card-media .wishlist-button svg{pointer-events:none}.product-card-media .product-hover-image{pointer-events:none}
-@media(min-width:769px){.hero-copy{top:auto;bottom:100px;transform:none}.hero-copy h1{font-size:clamp(100px,10vw,150px)}.hero-description{margin-top:25px}.hero-description p{font-size:12px}.hero-cta{padding:17px 23px;min-width:250px;margin-top:22px}.hero-secondary{display:inline-flex;margin:15px 0 0 0}.hero-description .hero-secondary{width:250px;justify-content:space-between;padding-right:23px}.hero-topline{top:34px}.hero-visual{inset:-1% 0 -5% 35%}.hero-shade{background:linear-gradient(90deg,#373a33 0%,#414238f5 25%,#55554b65 47%,#26292000 74%),linear-gradient(0deg,#25271f55,transparent 25%)}}
-@media(min-width:769px) and (max-width:1100px){.hero-copy h1{font-size:120px}.hero-description .hero-secondary{width:250px}.hero-visual{left:29%}}
-@media(max-width:768px){.hero-description .hero-secondary{margin-left:0}.hero-copy{bottom:105px}}
