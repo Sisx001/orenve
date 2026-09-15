@@ -54,7 +54,7 @@ export function BrandIntro() {
     <AnimatePresence>
       {show && (
         <motion.div
-          className="grain fixed inset-0 z-[120] flex flex-col items-center justify-center bg-ink text-bone"
+          className="grain fixed inset-0 z-[120] flex flex-col items-center justify-center bg-coal text-snow"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, y: "-100%" }}
           transition={{ duration: 0.9, ease: EASE }}
@@ -63,7 +63,7 @@ export function BrandIntro() {
             <Wordmark animated name={config.brand.name} height={44} />
           </motion.div>
           <motion.p
-            className="display-italic mt-8 max-w-sm px-6 text-center text-lg text-bone/70"
+            className="display-italic mt-8 max-w-sm px-6 text-center text-lg text-snow/70"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7, duration: 0.9, ease: EASE }}
@@ -73,7 +73,7 @@ export function BrandIntro() {
           <button
             type="button"
             onClick={close}
-            className="absolute bottom-10 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-bone/60 transition hover:text-bone"
+            className="absolute bottom-10 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-snow/60 transition hover:text-snow"
           >
             {t("common.skipIntro")}
           </button>

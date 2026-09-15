@@ -44,16 +44,16 @@ export default async function CollectionPage({
   return (
     <div className="pb-24">
       {/* hero banner */}
-      <section className="relative isolate flex min-h-[46dvh] items-end overflow-hidden bg-ink text-bone">
+      <section className="relative isolate flex min-h-[46dvh] items-end overflow-hidden bg-coal text-snow">
         {collection.image && (
           <>
             <img src={collection.image} alt="" aria-hidden className="absolute inset-0 -z-10 h-full w-full object-cover" />
-            <span aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-t from-ink via-ink/40 to-ink/10" />
+            <span aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-t from-coal via-coal/40 to-coal/10" />
           </>
         )}
         <span aria-hidden className="grain absolute inset-0 -z-10" />
         <div className="container-page pb-14 pt-32">
-          <p className="eyebrow text-bone/60">{t("nav.collections")}</p>
+          <p className="eyebrow text-snow/60">{t("nav.collections")}</p>
           <h1 className="display mt-4 max-w-3xl text-balance text-display-lg">
             {lines.map((l, i) => (
               <span key={i} className={cn("block", i % 2 === 1 && "display-italic text-brass")}>
@@ -61,7 +61,7 @@ export default async function CollectionPage({
               </span>
             ))}
           </h1>
-          {collection.description && <p className="mt-6 max-w-xl leading-relaxed text-bone/75">{collection.description}</p>}
+          {collection.description && <p className="mt-6 max-w-xl leading-relaxed text-snow/75">{collection.description}</p>}
         </div>
       </section>
 

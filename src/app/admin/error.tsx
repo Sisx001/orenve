@@ -11,7 +11,7 @@ export default function AdminError({ error, reset }: { error: Error & { digest?:
 
   return (
     <div className="mx-auto flex max-w-lg flex-col items-center py-24 text-center">
-      <span className="display text-5xl text-line">O/</span>
+      <span aria-hidden className="display text-5xl text-line">O/</span>
       <h1 className="display mt-6 text-2xl">Something went wrong in the studio</h1>
       <p className="mt-3 text-sm text-muted">
         Nothing was saved. Try again — if it keeps happening, the server log has the detail.

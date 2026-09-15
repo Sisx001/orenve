@@ -224,7 +224,7 @@ export function AdminShell({
   }, [pathname]);
 
   const sidebar = (
-    <div className="flex h-full flex-col bg-ink text-bone">
+    <div className="surface-dark flex h-full flex-col bg-ink text-bone">
       <div className="flex items-center gap-2.5 border-b border-bone/10 px-4 py-3.5">
         <Monogram size={22} className="text-bone" />
         <div className="min-w-0">
@@ -282,7 +282,7 @@ export function AdminShell({
             <ol className="flex min-w-0 items-center gap-1.5 text-xs">
               {trail.map((c, i) => (
                 <li key={c.href} className="flex min-w-0 items-center gap-1.5">
-                  {i > 0 && <span className="text-line">/</span>}
+                  {i > 0 && <span aria-hidden className="text-line">/</span>}
                   {i === trail.length - 1 ? (
                     <span className="truncate font-medium">{c.label}</span>
                   ) : (
