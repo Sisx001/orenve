@@ -119,7 +119,7 @@ export function StatusActions({
 
 /* ───────────────────────────── customer & address ───────────────────────────── */
 
-export type OrderAddress = { line1: string; line2: string; city: string; district: string; postalCode: string; country: string };
+export type OrderAddress = { line1: string; line2: string; city: string; district: string; postalCode: string; country: string; division?: string; upazila?: string; area?: string };
 
 export function CustomerBlock({
   orderId,

@@ -27,8 +27,13 @@ export const checkoutSchema = z.object({
     line2: z.string().trim().max(200).optional().or(z.literal("")),
     city: z.string().trim().min(2).max(100),
     district: z.string().trim().min(2).max(60),
+    division: z.string().trim().max(60).optional().or(z.literal("")),
+    upazila: z.string().trim().max(80).optional().or(z.literal("")),
+    area: z.string().trim().max(120).optional().or(z.literal("")),
     postalCode: z.string().trim().max(12).optional().or(z.literal("")),
     country: z.string().trim().length(2).default("BD"),
+    lat: z.number().optional(),
+    lng: z.number().optional(),
   }),
   notes: z.string().trim().max(1500).optional().or(z.literal("")),
   couponCode: z.string().trim().max(40).optional().or(z.literal("")),
@@ -115,12 +120,15 @@ export async function applyCoupon(code: string | undefined, subtotal: number, sh
   return { discount: 0, shipping: 0, coupon }; // free_shipping
 }
 
-export async function quote(input: { items: { variantId: string; quantity: number }[]; district?: string; couponCode?: string; locale?: string }) {
+export async function quote(input: { items: { variantId: string; quantity: number }[]; district?: string; couponCode?: string; locale?: string; paymentMethod?: string }) {
   const { lines, subtotal } = await priceCart(input.items, input.locale);
   const ship = input.district ? await computeShipping(input.district, subtotal) : { zone: null, amount: 0 };
   const { discount, shipping, coupon } = await applyCoupon(input.couponCode || undefined, subtotal, ship.amount);
-  const total = Math.max(0, subtotal - discount + shipping);
-  return { lines, subtotal, shipping, discount, total, zone: ship.zone, coupon };
+  // Cash-on-delivery handling fee (studio → Checkout & payments). Only when COD is the chosen method.
+  const checkout = input.paymentMethod === "cod" ? await getSetting("checkout") : null;
+  const codFee = checkout && checkout.codFee > 0 ? checkout.codFee : 0;
+  const total = Math.max(0, subtotal - discount + shipping + codFee);
+  return { lines, subtotal, shipping, discount, codFee, total, zone: ship.zone, coupon };
 }
 
 // ───────────────────────────── placement ─────────────────────────────
@@ -145,8 +153,9 @@ export async function placeOrder(raw: unknown, ctx: { ip?: string }) {
   if (site.mode !== "live") throw new CheckoutError("checkout.paused");
   if (!checkout.website && input.channel === "website") throw new CheckoutError("checkout.paused");
 
-  const q = await quote({ items: input.items, district: input.address.district, couponCode: input.couponCode || undefined, locale: input.locale });
+  const q = await quote({ items: input.items, district: input.address.district, couponCode: input.couponCode || undefined, locale: input.locale, paymentMethod: input.paymentMethod });
   if (checkout.minOrder && q.subtotal < checkout.minOrder) throw new CheckoutError("checkout.minOrder", { amount: formatMoney(checkout.minOrder) });
+  if (input.paymentMethod === "cod" && checkout.codMaxOrder > 0 && q.subtotal > checkout.codMaxOrder) throw new CheckoutError("checkout.codMaxOrder", { amount: formatMoney(checkout.codMaxOrder) });
   if (checkout.requireEmail && !input.email) throw new CheckoutError("errors.invalidInput");
 
   const method: PaymentMethod = input.paymentMethod;
@@ -188,6 +197,7 @@ export async function placeOrder(raw: unknown, ctx: { ip?: string }) {
         subtotal: q.subtotal,
         discount: q.discount,
         shipping: q.shipping,
+        codFee: q.codFee,
         total: q.total,
         couponCode: q.coupon?.code ?? null,
         customerName: input.customerName,
@@ -298,6 +308,7 @@ export function toPublicView(order: OrderWithRel, locale: string): PublicOrderVi
     placedAt: order.placedAt.toISOString(),
     total: order.total,
     subtotal: order.subtotal,
+    codFee: order.codFee,
     shipping: order.shipping,
     discount: order.discount,
     currency: order.currency,

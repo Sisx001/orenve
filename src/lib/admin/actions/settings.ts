@@ -85,9 +85,18 @@ export async function saveFeaturesAction(_prev: ActionState, fd: FormData): Prom
 
 /* ───────────────────────────── checkout & payments ───────────────────────────── */
 
+/** Secret-ish text field: blank keeps the stored value, "__clear__" empties it. */
+const secret = (fd: FormData, name: string, current: string) => {
+  const raw = String(fd.get(name) ?? "");
+  if (raw === "__clear__") return "";
+  return raw.trim() ? raw.trim() : current;
+};
+
 export async function saveCheckoutAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async () => {
     const user = await authorize("settings.write", fd);
+    const cur = await getSetting("checkout");
+    const g = cur.gateways;
     await saveSetting("checkout", {
       whatsapp: readBool(fd, "whatsapp"),
       messenger: readBool(fd, "messenger"),
@@ -95,8 +104,14 @@ export async function saveCheckoutAction(_prev: ActionState, fd: FormData): Prom
       cod: readBool(fd, "cod"),
       bkash: readBool(fd, "bkash"),
       nagad: readBool(fd, "nagad"),
+      bkash_checkout: readBool(fd, "bkash_checkout"),
+      nagad_checkout: readBool(fd, "nagad_checkout"),
       sslcommerz: readBool(fd, "sslcommerz"),
+      aamarpay: readBool(fd, "aamarpay"),
+      shurjopay: readBool(fd, "shurjopay"),
       stripe: readBool(fd, "stripe"),
+      codFee: readMoney(fd, "codFee") ?? 0,
+      codMaxOrder: readMoney(fd, "codMaxOrder") ?? 0,
       bkashNumber: String(fd.get("bkashNumber") ?? "").trim(),
       nagadNumber: String(fd.get("nagadNumber") ?? "").trim(),
       mfsInstructions: pairOf(fd, "mfsInstructions"),
@@ -106,6 +121,13 @@ export async function saveCheckoutAction(_prev: ActionState, fd: FormData): Prom
       notesEnabled: readBool(fd, "notesEnabled"),
       whatsappTemplate: pairOf(fd, "whatsappTemplate"),
       autoConfirmCod: readBool(fd, "autoConfirmCod"),
+      gateways: {
+        bkash: { sandbox: readBool(fd, "gw_bkash_sandbox"), appKey: secret(fd, "gw_bkash_appKey", g.bkash.appKey), appSecret: secret(fd, "gw_bkash_appSecret", g.bkash.appSecret), username: secret(fd, "gw_bkash_username", g.bkash.username), password: secret(fd, "gw_bkash_password", g.bkash.password) },
+        nagad: { sandbox: readBool(fd, "gw_nagad_sandbox"), merchantId: secret(fd, "gw_nagad_merchantId", g.nagad.merchantId), merchantNumber: secret(fd, "gw_nagad_merchantNumber", g.nagad.merchantNumber), merchantPrivateKey: secret(fd, "gw_nagad_merchantPrivateKey", g.nagad.merchantPrivateKey), pgPublicKey: secret(fd, "gw_nagad_pgPublicKey", g.nagad.pgPublicKey) },
+        aamarpay: { sandbox: readBool(fd, "gw_aamarpay_sandbox"), storeId: secret(fd, "gw_aamarpay_storeId", g.aamarpay.storeId), signatureKey: secret(fd, "gw_aamarpay_signatureKey", g.aamarpay.signatureKey) },
+        shurjopay: { sandbox: readBool(fd, "gw_shurjopay_sandbox"), username: secret(fd, "gw_shurjopay_username", g.shurjopay.username), password: secret(fd, "gw_shurjopay_password", g.shurjopay.password), prefix: String(fd.get("gw_shurjopay_prefix") ?? g.shurjopay.prefix).trim() || "ORY" },
+        sslcommerz: { sandbox: readBool(fd, "gw_sslcommerz_sandbox"), storeId: secret(fd, "gw_sslcommerz_storeId", g.sslcommerz.storeId), storePassword: secret(fd, "gw_sslcommerz_storePassword", g.sslcommerz.storePassword) },
+      },
     });
     await audit(user.id, "settings.checkout", "setting", "checkout");
     revalidateStudio("/admin/settings/checkout", "/admin");
@@ -307,5 +329,96 @@ export async function unflagConversationAction(_prev: ActionState, fd: FormData)
     await audit(user.id, "ai.conversation_unflag", "aiConversation", id);
     revalidateStudio("/admin/concierge");
     return succeed("Flag cleared.");
+  });
+}
+
+/* ───────────────────────────── couriers ───────────────────────────── */
+
+export async function saveCourierAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await authorize("settings.write", fd);
+    const cur = await getSetting("courier");
+    const s = (name: string, current: string) => {
+      const raw = String(fd.get(name) ?? "");
+      if (raw === "__clear__") return "";
+      return raw.trim() ? raw.trim() : current;
+    };
+    const dp = String(fd.get("defaultProvider") ?? cur.defaultProvider);
+    await saveSetting("courier", {
+      defaultProvider: ["pathao", "steadfast", "redx", "paperfly", "manual"].includes(dp) ? dp : "manual",
+      autoBookOnConfirm: readBool(fd, "autoBookOnConfirm"),
+      autoSyncMinutes: readInt(fd, "autoSyncMinutes") ?? cur.autoSyncMinutes,
+      defaultWeightKg: num(fd, "defaultWeightKg", cur.defaultWeightKg),
+      pathao: { enabled: readBool(fd, "pathao_enabled"), sandbox: readBool(fd, "pathao_sandbox"), baseUrl: String(fd.get("pathao_baseUrl") ?? "").trim(), clientId: s("pathao_clientId", cur.pathao.clientId), clientSecret: s("pathao_clientSecret", cur.pathao.clientSecret), username: s("pathao_username", cur.pathao.username), password: s("pathao_password", cur.pathao.password), storeId: String(fd.get("pathao_storeId") ?? cur.pathao.storeId).trim(), webhookSecret: s("pathao_webhookSecret", cur.pathao.webhookSecret) },
+      steadfast: { enabled: readBool(fd, "steadfast_enabled"), baseUrl: String(fd.get("steadfast_baseUrl") ?? "").trim(), apiKey: s("steadfast_apiKey", cur.steadfast.apiKey), secretKey: s("steadfast_secretKey", cur.steadfast.secretKey) },
+      redx: { enabled: readBool(fd, "redx_enabled"), sandbox: readBool(fd, "redx_sandbox"), baseUrl: String(fd.get("redx_baseUrl") ?? "").trim(), accessToken: s("redx_accessToken", cur.redx.accessToken), pickupStoreId: String(fd.get("redx_pickupStoreId") ?? cur.redx.pickupStoreId).trim() },
+      paperfly: { enabled: readBool(fd, "paperfly_enabled"), baseUrl: String(fd.get("paperfly_baseUrl") ?? "").trim(), username: s("paperfly_username", cur.paperfly.username), password: s("paperfly_password", cur.paperfly.password), merchantKey: s("paperfly_merchantKey", cur.paperfly.merchantKey) },
+      manualCouriers: String(fd.get("manualCouriers") ?? cur.manualCouriers.join(", ")).split(",").map((x) => x.trim()).filter(Boolean),
+    });
+    await audit(user.id, "settings.courier", "setting", "courier");
+    revalidateStudio("/admin/settings/couriers", "/admin");
+    return succeed("Courier settings saved.");
+  });
+}
+
+/* ───────────────────────────── address & delivery geography ───────────────────────────── */
+
+export async function saveGeoAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await authorize("settings.write", fd);
+    const levels = (["division", "district", "upazila", "area", "postcode"] as const).filter((l) => l === "district" || readBool(fd, `level_${l}`));
+    await saveSetting("geo", {
+      addressLevels: levels,
+      autoDetect: readBool(fd, "autoDetect"),
+      requirePostcode: readBool(fd, "requirePostcode"),
+      allowCustomArea: readBool(fd, "allowCustomArea"),
+      internationalShipping: readBool(fd, "internationalShipping"),
+    });
+    await audit(user.id, "settings.geo", "setting", "geo");
+    revalidateStudio("/admin/settings/address");
+    return succeed("Address settings saved.");
+  });
+}
+
+export async function addGeoOverrideAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await authorize("settings.write", fd);
+    const level = String(fd.get("level") ?? "");
+    if (!["district", "upazila", "area", "postcode"].includes(level)) return fail("Choose a level.");
+    const en = String(fd.get("en") ?? "").trim();
+    if (!en) return fail("Name is required.", { en: "Required" });
+    const parentId = String(fd.get("parentId") ?? "").trim() || null;
+    if (!parentId) return fail("Choose the parent district or division.", { parentId: "Required" });
+    const row = await db.geoOverride.create({
+      data: { level, parentId, en, bn: String(fd.get("bn") ?? "").trim() || null, code: String(fd.get("code") ?? "").trim() || null, lat: fd.get("lat") ? num(fd, "lat", 0) : null, lng: fd.get("lng") ? num(fd, "lng", 0) : null },
+    });
+    await audit(user.id, "geo.override.create", "geo", row.id, { level, en });
+    revalidateStudio("/admin/settings/address");
+    return succeed(`Added ${en}.`);
+  });
+}
+
+export async function deleteGeoOverrideAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await authorize("settings.write", fd);
+    const id = String(fd.get("id") ?? "");
+    await db.geoOverride.delete({ where: { id } });
+    await audit(user.id, "geo.override.delete", "geo", id);
+    revalidateStudio("/admin/settings/address");
+    return succeed("Removed.");
+  });
+}
+
+export async function hideGeoEntryAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await authorize("settings.write", fd);
+    const level = String(fd.get("level") ?? "");
+    const targetKey = String(fd.get("targetKey") ?? "");
+    const en = String(fd.get("en") ?? targetKey);
+    if (!level || !targetKey) return fail("Nothing to hide.");
+    const row = await db.geoOverride.create({ data: { level, targetKey, en, isHidden: true } });
+    await audit(user.id, "geo.override.hide", "geo", row.id, { level, targetKey });
+    revalidateStudio("/admin/settings/address");
+    return succeed(`Hidden ${en} from the address picker.`);
   });
 }

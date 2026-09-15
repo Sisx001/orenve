@@ -12,7 +12,7 @@ export const brandSchema = z.object({
   name: z.string().default("ORYNVE"),
   tagline: z.record(z.string()).default({ en: "Not for everyone. For you.", bn: "সবার জন্য নয়। আপনার জন্য।" }),
   logoUrl: z.string().nullable().default(null), // custom raster/SVG upload; null = built-in mark
-  accent: z.string().default("#c2542b"),
+  accent: z.string().default("#b24a24"),
   brass: z.string().default("#c9a25c"),
   theme: z.enum(["light", "dark", "system"]).default("light"),
   radius: z.number().min(0).max(24).default(2),
@@ -66,12 +66,27 @@ export const checkoutSchema = z.object({
   messenger: z.boolean().default(false),
   website: z.boolean().default(true), // on-site checkout form
   cod: z.boolean().default(true),
-  bkash: z.boolean().default(true),
-  nagad: z.boolean().default(true),
+  bkash: z.boolean().default(true), // manual Send Money + TrxID
+  nagad: z.boolean().default(true), // manual Send Money + TrxID
+  bkash_checkout: z.boolean().default(false), // bKash Tokenized Checkout API
+  nagad_checkout: z.boolean().default(false), // Nagad Payment Gateway API
   sslcommerz: z.boolean().default(false),
+  aamarpay: z.boolean().default(false),
+  shurjopay: z.boolean().default(false),
   stripe: z.boolean().default(false),
+  codFee: z.number().int().default(0), // minor units added for COD orders
+  codMaxOrder: z.number().int().default(0), // 0 = no cap
   bkashNumber: z.string().default(""),
   nagadNumber: z.string().default(""),
+  gateways: z
+    .object({
+      bkash: z.object({ sandbox: z.boolean().default(true), appKey: z.string().default(""), appSecret: z.string().default(""), username: z.string().default(""), password: z.string().default("") }).default({}),
+      nagad: z.object({ sandbox: z.boolean().default(true), merchantId: z.string().default(""), merchantNumber: z.string().default(""), merchantPrivateKey: z.string().default(""), pgPublicKey: z.string().default("") }).default({}),
+      aamarpay: z.object({ sandbox: z.boolean().default(true), storeId: z.string().default(""), signatureKey: z.string().default("") }).default({}),
+      shurjopay: z.object({ sandbox: z.boolean().default(true), username: z.string().default(""), password: z.string().default(""), prefix: z.string().default("ORY") }).default({}),
+      sslcommerz: z.object({ sandbox: z.boolean().default(true), storeId: z.string().default(""), storePassword: z.string().default("") }).default({}),
+    })
+    .default({}),
   mfsInstructions: z.record(z.string()).default({
     en: "Send Money to the number above, then enter the Transaction ID (TrxID) below. We verify within business hours.",
     bn: "উপরের নম্বরে সেন্ড মানি করুন, তারপর নিচে ট্রানজ্যাকশন আইডি (TrxID) দিন। আমরা অফিস সময়ের মধ্যে যাচাই করি।",
@@ -159,7 +174,29 @@ export const aiSchema = z.object({
   handoffWhatsapp: z.boolean().default(true),
 });
 
+export const courierSchema = z.object({
+  defaultProvider: z.enum(["pathao", "steadfast", "redx", "paperfly", "manual"]).default("manual"),
+  autoBookOnConfirm: z.boolean().default(false),
+  autoSyncMinutes: z.number().int().min(0).default(60), // 0 = manual sync only
+  defaultWeightKg: z.number().min(0.1).default(0.5),
+  pathao: z.object({ enabled: z.boolean().default(false), sandbox: z.boolean().default(true), baseUrl: z.string().default(""), clientId: z.string().default(""), clientSecret: z.string().default(""), username: z.string().default(""), password: z.string().default(""), storeId: z.string().default(""), webhookSecret: z.string().default("") }).default({}),
+  steadfast: z.object({ enabled: z.boolean().default(false), baseUrl: z.string().default(""), apiKey: z.string().default(""), secretKey: z.string().default("") }).default({}),
+  redx: z.object({ enabled: z.boolean().default(false), sandbox: z.boolean().default(true), baseUrl: z.string().default(""), accessToken: z.string().default(""), pickupStoreId: z.string().default("") }).default({}),
+  paperfly: z.object({ enabled: z.boolean().default(false), baseUrl: z.string().default(""), username: z.string().default(""), password: z.string().default(""), merchantKey: z.string().default("") }).default({}),
+  manualCouriers: z.array(z.string()).default(["Pathao", "Steadfast", "RedX", "Paperfly", "Sundarban", "SA Paribahan", "Carrybee"]),
+});
+
+export const geoSchema = z.object({
+  addressLevels: z.array(z.enum(["division", "district", "upazila", "area", "postcode"])).default(["district", "upazila", "area", "postcode"]),
+  autoDetect: z.boolean().default(true),
+  requirePostcode: z.boolean().default(false),
+  allowCustomArea: z.boolean().default(true),
+  internationalShipping: z.boolean().default(false),
+});
+
 export const SETTING_SCHEMAS = {
+  courier: courierSchema,
+  geo: geoSchema,
   brand: brandSchema,
   contact: contactSchema,
   features: featuresSchema,
@@ -207,6 +244,8 @@ export async function getPublicConfig() {
     getSetting("ai"),
   ]);
   const { apiKey: _k, baseUrl: _b, model: _m, extraInstructions: _e, ...aiPublic } = ai;
-  return { brand, contact, features, checkout, currency, locale, seo, site, ai: aiPublic };
+  const { gateways: _g, ...checkoutPublic } = checkout; // gateway credentials never leave the server
+  const geo = await getSetting("geo");
+  return { brand, contact, features, checkout: checkoutPublic, currency, locale, seo, site, ai: aiPublic, geo };
 }
 export type PublicConfig = Awaited<ReturnType<typeof getPublicConfig>>;

@@ -9,18 +9,29 @@ import type { PaymentProvider, WebhookVerification } from "./types";
  * Flow: init → redirect to GatewayPageURL → success/fail/cancel callbacks (POST) →
  *       server validates via validator API using val_id before marking paid.
  */
-const base = () =>
-  process.env.SSLCOMMERZ_SANDBOX === "false" ? "https://securepay.sslcommerz.com" : "https://sandbox.sslcommerz.com";
+import { getSetting } from "@/lib/settings";
+
+async function creds() {
+  const c = (await getSetting("checkout")).gateways.sslcommerz;
+  const sandbox = c.storeId ? c.sandbox : process.env.SSLCOMMERZ_SANDBOX !== "false";
+  return {
+    base: sandbox ? "https://sandbox.sslcommerz.com" : "https://securepay.sslcommerz.com",
+    storeId: c.storeId || process.env.SSLCOMMERZ_STORE_ID || "",
+    storePassword: c.storePassword || process.env.SSLCOMMERZ_STORE_PASSWORD || "",
+  };
+}
 
 export const sslcommerzProvider: PaymentProvider = {
   method: "sslcommerz",
   async isConfigured() {
-    return Boolean(process.env.SSLCOMMERZ_STORE_ID && process.env.SSLCOMMERZ_STORE_PASSWORD);
+    const c = await creds();
+    return Boolean(c.storeId && c.storePassword);
   },
   async init(order) {
+    const c = await creds();
     const body = new URLSearchParams({
-      store_id: process.env.SSLCOMMERZ_STORE_ID!,
-      store_passwd: process.env.SSLCOMMERZ_STORE_PASSWORD!,
+      store_id: c.storeId,
+      store_passwd: c.storePassword,
       total_amount: minorToMajor(order.total).toFixed(2),
       currency: "BDT",
       tran_id: order.number,
@@ -41,7 +52,7 @@ export const sslcommerzProvider: PaymentProvider = {
       value_a: order.id,
       value_b: order.trackingCode,
     });
-    const res = await fetch(`${base()}/gwprocess/v4/api.php`, {
+    const res = await fetch(`${c.base}/gwprocess/v4/api.php`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body,
@@ -60,10 +71,11 @@ export async function verifySslcommerz(payload: Record<string, string>): Promise
   const valId = payload.val_id;
   const tranId = payload.tran_id;
   if (!valId || !tranId) return { status: "failed", raw: payload, orderNumber: tranId };
-  const url = new URL(`${base()}/validator/api/validationserverAPI.php`);
+  const c = await creds();
+  const url = new URL(`${c.base}/validator/api/validationserverAPI.php`);
   url.searchParams.set("val_id", valId);
-  url.searchParams.set("store_id", process.env.SSLCOMMERZ_STORE_ID!);
-  url.searchParams.set("store_passwd", process.env.SSLCOMMERZ_STORE_PASSWORD!);
+  url.searchParams.set("store_id", c.storeId);
+  url.searchParams.set("store_passwd", c.storePassword);
   url.searchParams.set("format", "json");
   const res = await fetch(url, { cache: "no-store" });
   const data = (await res.json()) as { status: string; tran_id: string; amount: string; bank_tran_id?: string; store_amount?: string };

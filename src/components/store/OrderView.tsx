@@ -192,6 +192,12 @@ export function OrderView({
             <dt className="text-muted">{t("cart.shipping")}</dt>
             <dd className="tabular-nums">{order.shipping > 0 ? money(order.shipping) : t("common.free")}</dd>
           </div>
+          {order.codFee > 0 && (
+            <div className="flex justify-between">
+              <dt className="text-muted">{t("checkout.codFeeLine")}</dt>
+              <dd className="tabular-nums">{money(order.codFee)}</dd>
+            </div>
+          )}
           <div className="mt-2 flex justify-between border-t border-line pt-3 text-base">
             <dt className="display">{t("cart.total")}</dt>
             <dd className="display tabular-nums">{money(order.total)}</dd>

@@ -4,7 +4,7 @@ import { toJson } from "@/lib/json";
 import type { WebhookVerification } from "./types";
 
 /** Idempotently applies a gateway result to an order + payment rows. */
-export async function recordGatewayResult(orderId: string, provider: "sslcommerz" | "stripe", v: WebhookVerification) {
+export async function recordGatewayResult(orderId: string, provider: string, v: WebhookVerification) {
   const order = await db.order.findUnique({ where: { id: orderId } });
   if (!order) return;
   if (order.paymentStatus === "paid" && v.status !== "paid") return; // never downgrade a paid order from a late fail event

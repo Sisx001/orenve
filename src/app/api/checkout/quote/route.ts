@@ -11,6 +11,7 @@ const schema = z.object({
   district: z.string().optional(),
   couponCode: z.string().optional(),
   locale: z.string().default("en"),
+  paymentMethod: z.string().optional(),
 });
 
 /** POST /api/checkout/quote — live totals (shipping, coupon) for the cart drawer & checkout. */
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
     return jsonOk({
       subtotal: q.subtotal,
       shipping: q.shipping,
+      codFee: q.codFee,
       discount: q.discount,
       total: q.total,
       zone: q.zone ? { id: q.zone.id, etaMinDays: q.zone.etaMinDays, etaMaxDays: q.zone.etaMaxDays, freeAbove: q.zone.freeAbove } : null,

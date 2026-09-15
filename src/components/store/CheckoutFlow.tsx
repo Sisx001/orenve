@@ -10,15 +10,20 @@ import { useConfig } from "@/components/providers/ConfigProvider";
 import { apiFetch } from "@/lib/store/api";
 import { i18nText } from "@/lib/json";
 import { localizedPath } from "@/lib/i18n";
-import { BD_DISTRICTS, type PaymentMethod } from "@/lib/constants";
-import { Button, EmptyState, Input, Select, Textarea } from "@/components/ui";
+import { type PaymentMethod } from "@/lib/constants";
+import { AddressFields } from "@/components/store/AddressFields";
+
+import { Button, EmptyState, Input, Textarea } from "@/components/ui";
 import { LocaleLink } from "@/components/store/LocaleLink";
 import { CopyButton } from "@/components/store/CopyButton";
 import { cn } from "@/lib/utils";
 
+const REDIRECT_METHODS: PaymentMethod[] = ["sslcommerz", "stripe", "aamarpay", "shurjopay", "bkash_checkout", "nagad_checkout"];
+
 type Quote = {
   subtotal: number;
   shipping: number;
+  codFee: number;
   discount: number;
   total: number;
   zone: { id: string; etaMinDays: number; etaMaxDays: number; freeAbove: number | null } | null;
@@ -54,6 +59,11 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
   const [line2, setLine2] = useState("");
   const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
+  const [districtId, setDistrictId] = useState<string | undefined>(undefined);
+  const [divisionId, setDivisionId] = useState<string | undefined>(undefined);
+  const [division, setDivision] = useState("");
+  const [upazila, setUpazila] = useState("");
+  const [area, setArea] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [notes, setNotes] = useState("");
   const [coupon, setCoupon] = useState(cart.couponCode);
@@ -74,12 +84,12 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
 
   /* ── live quote ── */
   const fetchQuote = useCallback(
-    async (dist: string, code: string) => {
+    async (dist: string, code: string, pay: string) => {
       if (items.length === 0) return;
       try {
         const r = await apiFetch<Quote>("/api/checkout/quote", {
           method: "POST",
-          json: { items, district: dist || undefined, couponCode: code || undefined, locale },
+          json: { items, district: dist || undefined, couponCode: code || undefined, locale, paymentMethod: pay || undefined },
         });
         setQuote(r);
       } catch (e) {
@@ -94,11 +104,11 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
 
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => void fetchQuote(district, coupon.trim().toUpperCase()), 350);
+    timer.current = setTimeout(() => void fetchQuote(district, coupon.trim().toUpperCase(), method), 350);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [district, coupon, fetchQuote]);
+  }, [district, coupon, method, fetchQuote]);
 
   /* ── default payment method once methods are known ── */
   useEffect(() => {
@@ -174,6 +184,9 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
           line2: line2.trim() || undefined,
           city: conversational ? (city.trim() || district) : city.trim(),
           district,
+          division: division || undefined,
+          upazila: upazila || undefined,
+          area: area || undefined,
           postalCode: postalCode.trim() || undefined,
           country: "BD",
         },
@@ -276,7 +289,11 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
     cod: t("checkout.cod"),
     bkash: t("checkout.bkash"),
     nagad: t("checkout.nagad"),
+    bkash_checkout: t("checkout.bkash_checkout"),
+    nagad_checkout: t("checkout.nagad_checkout"),
     sslcommerz: t("checkout.sslcommerz"),
+    aamarpay: t("checkout.aamarpay"),
+    shurjopay: t("checkout.shurjopay"),
     stripe: t("checkout.stripe"),
     none: t("tracking.methods.none"),
   };
@@ -284,7 +301,11 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
     cod: t("checkout.codHint"),
     bkash: t("checkout.mfsHint"),
     nagad: t("checkout.mfsHint"),
+    bkash_checkout: t("checkout.bkash_checkoutHint"),
+    nagad_checkout: t("checkout.nagad_checkoutHint"),
     sslcommerz: t("checkout.sslcommerzHint"),
+    aamarpay: t("checkout.aamarpayHint"),
+    shurjopay: t("checkout.shurjopayHint"),
     stripe: t("checkout.stripeHint"),
     none: "",
   };
@@ -346,7 +367,7 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
                 aria-current={step === i}
                 className={cn(
                   "flex h-7 w-7 shrink-0 items-center justify-center border text-[0.6rem] font-semibold",
-                  i < step ? "border-oxide bg-oxide text-paper" : step === i ? "border-ink text-ink" : "border-line text-muted",
+                  i < step ? "border-oxide bg-oxide text-snow" : step === i ? "border-ink text-ink" : "border-line text-muted",
                 )}
               >
                 {i < step ? <Check className="h-3 w-3" aria-hidden /> : i + 1}
@@ -396,17 +417,29 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
                 {conversational ? t("checkout.deliveryMethod") : t("checkout.address")}
               </h2>
               <div className="grid gap-6 sm:grid-cols-2">
-                <Select
-                  label={t("checkout.district")}
-                  value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
-                  error={errors.district}
-                  required
-                  options={[{ value: "", label: `— ${t("checkout.district")} —` }, ...BD_DISTRICTS.map((d) => ({ value: d, label: d }))]}
-                />
+                <div className="sm:col-span-2">
+                  <AddressFields
+                    value={{ divisionId, division, districtId, district, upazila, area, postalCode: postalCode || undefined, city }}
+                    onChange={(v) => {
+                      setDivisionId(v.divisionId);
+                      setDivision(v.division ?? "");
+                      setDistrictId(v.districtId);
+                      setDistrict(v.district);
+                      setUpazila(v.upazila ?? "");
+                      setArea(v.area ?? "");
+                      setPostalCode(v.postalCode ?? "");
+                      setCity(v.city || v.area || v.upazila || "");
+                    }}
+                    levels={conversational ? ["district", "upazila"] : (config.geo?.addressLevels ?? ["district", "upazila", "area", "postcode"])}
+                    autoDetect={config.geo?.autoDetect ?? true}
+                    allowCustomArea={config.geo?.allowCustomArea ?? true}
+                    requirePostcode={config.geo?.requirePostcode ?? false}
+                    errors={{ district: errors.district, city: errors.city }}
+                    boxed={false}
+                  />
+                </div>
                 {!conversational && (
                   <>
-                    <Input label={t("checkout.city")} value={city} onChange={(e) => setCity(e.target.value)} error={errors.city} required autoComplete="address-level2" />
                     <Input
                       label={t("checkout.line1")}
                       value={line1}
@@ -416,8 +449,7 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
                       autoComplete="address-line1"
                       className="sm:col-span-2"
                     />
-                    <Input label={t("checkout.line2")} value={line2} onChange={(e) => setLine2(e.target.value)} autoComplete="address-line2" />
-                    <Input label={t("checkout.postalCode")} value={postalCode} onChange={(e) => setPostalCode(e.target.value)} inputMode="numeric" autoComplete="postal-code" />
+                    <Input label={t("checkout.line2")} value={line2} onChange={(e) => setLine2(e.target.value)} autoComplete="address-line2" className="sm:col-span-2" />
                   </>
                 )}
                 {checkout.notesEnabled && (
@@ -557,7 +589,7 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
                 </Button>
               ) : (
                 <Button type="submit" loading={busy}>
-                  {conversational ? t("checkout.openWhatsapp") : method === "sslcommerz" || method === "stripe" ? t("checkout.payNow") : t("checkout.placeOrder")}
+                  {conversational ? t("checkout.openWhatsapp") : REDIRECT_METHODS.includes(method as PaymentMethod) ? t("checkout.payNow") : t("checkout.placeOrder")}
                 </Button>
               )}
             </div>
@@ -615,6 +647,12 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
                   <dt className="text-muted">{t("cart.shipping")}</dt>
                   <dd className="tabular-nums">{district ? (quote?.shipping ? money(quote.shipping) : t("common.free")) : t("cart.shippingCalculated")}</dd>
                 </div>
+                {!!quote?.codFee && (
+                  <div className="flex justify-between">
+                    <dt className="text-muted">{t("checkout.codFeeLine")}</dt>
+                    <dd className="tabular-nums">{money(quote.codFee)}</dd>
+                  </div>
+                )}
                 <div className="mt-2 flex justify-between border-t border-line pt-3 text-base">
                   <dt className="display">{t("cart.total")}</dt>
                   <dd className="display tabular-nums">{money(total)}</dd>
@@ -625,7 +663,7 @@ export function CheckoutFlow({ initialChannel }: { initialChannel: "website" | "
 
               <div className="hidden border-t border-line px-5 py-5 lg:block">
                 <Button type="submit" loading={busy} className="w-full">
-                  {conversational ? t("checkout.openWhatsapp") : method === "sslcommerz" || method === "stripe" ? t("checkout.payNow") : t("checkout.placeOrder")}
+                  {conversational ? t("checkout.openWhatsapp") : REDIRECT_METHODS.includes(method as PaymentMethod) ? t("checkout.payNow") : t("checkout.placeOrder")}
                 </Button>
                 {busy && <p className="mt-3 text-center text-xs text-muted">{t("checkout.processing")}</p>}
               </div>

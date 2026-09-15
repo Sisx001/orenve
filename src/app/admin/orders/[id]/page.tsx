@@ -22,6 +22,8 @@ import { can } from "@/lib/auth/session";
 import { i18nText, parseJson } from "@/lib/json";
 import { formatMoney } from "@/lib/money";
 import { PAYMENT_METHOD_LABELS } from "@/lib/admin/constants";
+import { getSetting } from "@/lib/settings";
+import { ShipmentPanel } from "./ShipmentPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -39,9 +41,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       payments: { orderBy: { createdAt: "desc" }, include: { verifiedBy: { select: { name: true } } } },
       events: { orderBy: { createdAt: "desc" }, include: { createdBy: { select: { name: true } } } },
       customer: { select: { id: true, name: true, phone: true, _count: { select: { orders: true } } } },
+      shipments: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!order) notFound();
+  const courierSettings = await getSetting("courier");
 
   const address = parseJson<Partial<OrderAddress>>(order.shippingAddress, {});
   const addr: OrderAddress = {
@@ -52,6 +56,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     postalCode: address.postalCode ?? "",
     country: address.country ?? "BD",
   };
+  const extraAddress = [address.area, address.upazila, address.division].filter(Boolean).join(" · ");
 
   const payments: PaymentRow[] = order.payments.map((p) => ({
     id: p.id,
@@ -177,20 +182,31 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             />
           </Section>
 
-          <Section title="Courier">
-            <CourierBlock
+          <Section title="Shipments" description={extraAddress ? `Delivery area: ${extraAddress}` : "Book a consignment or record the courier you used."}>
+            <ShipmentPanel
               orderId={order.id}
-              csrf={csrf}
-              courier={order.courier ?? ""}
-              tracking={order.courierTracking ?? ""}
-              url={order.courierUrl ?? ""}
+              canBook={order.status !== "cancelled" && order.status !== "refunded"}
+              manualCouriers={courierSettings.manualCouriers}
+              shipments={order.shipments.map((s) => ({
+                id: s.id,
+                provider: s.provider,
+                consignmentId: s.consignmentId,
+                trackingCode: s.trackingCode,
+                trackingUrl: s.trackingUrl,
+                status: s.status,
+                rawStatus: s.rawStatus,
+                codAmount: s.codAmount,
+                deliveryFee: s.deliveryFee,
+                lastSyncedAt: s.lastSyncedAt ? dt(s.lastSyncedAt) : null,
+                createdAt: dt(s.createdAt),
+              }))}
             />
-            {order.courierUrl && (
-              <a href={order.courierUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs text-oxide hover:underline">
-                Open tracking page
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
+            <details className="mt-4 border-t border-line pt-3">
+              <summary className="cursor-pointer text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted">Edit courier fields by hand</summary>
+              <div className="mt-3">
+                <CourierBlock orderId={order.id} csrf={csrf} courier={order.courier ?? ""} tracking={order.courierTracking ?? ""} url={order.courierUrl ?? ""} />
+              </div>
+            </details>
           </Section>
 
           <Section title="Internal notes">
@@ -203,6 +219,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 ["Subtotal", formatMoney(order.subtotal)],
                 ["Discount", `−${formatMoney(order.discount)}`],
                 ["Shipping", formatMoney(order.shipping)],
+                ...(order.codFee > 0 ? [["COD fee", formatMoney(order.codFee)] as [string, string]] : []),
                 ["Total", formatMoney(order.total)],
               ].map(([k, v], i) => (
                 <div key={k} className={i === 3 ? "flex justify-between border-t border-line pt-1.5 font-medium" : "flex justify-between"}>

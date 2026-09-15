@@ -76,6 +76,7 @@ export type PublicOrderView = {
   total: number;
   subtotal: number;
   shipping: number;
+  codFee: number;
   discount: number;
   currency: string;
   customerName: string;

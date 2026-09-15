@@ -248,8 +248,13 @@ model Address {
   line2      String?
   city       String
   district   String
+  division   String?
+  upazila    String?
+  area       String?
   postalCode String?
   country    String  @default("BD")
+  lat        Float?
+  lng        Float?
   isDefault  Boolean @default(false)
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -269,6 +274,7 @@ model Order {
   subtotal        Int
   discount        Int       @default(0)
   shipping        Int       @default(0)
+  codFee          Int       @default(0)
   total           Int
   couponCode      String?
   customerName    String
@@ -281,6 +287,7 @@ model Order {
   courier         String?
   courierTracking String?
   courierUrl      String?
+  courierStatus   String? // last raw status from the courier API
   locale          String    @default("en")
   ip              String?
   placedAt        DateTime  @default(now())
@@ -292,14 +299,81 @@ model Order {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  customer Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  items    OrderItem[]
-  events   OrderEvent[]
-  payments Payment[]
+  customer  Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items     OrderItem[]
+  events    OrderEvent[]
+  payments  Payment[]
+  shipments Shipment[]
 
   @@index([status])
   @@index([phone])
   @@index([placedAt])
+}
+
+/** A consignment booked with a courier (API or manual). */
+model Shipment {
+  id             String    @id @default(cuid())
+  orderId        String
+  provider       String // pathao | steadfast | redx | paperfly | manual
+  consignmentId  String? // provider's id
+  trackingCode   String? // provider tracking number
+  trackingUrl    String?
+  status         String    @default("booked") // booked | picked | in_transit | delivered | returned | cancelled | failed
+  rawStatus      String?
+  codAmount      Int       @default(0)
+  deliveryFee    Int?
+  weightGrams    Int?
+  note           String?
+  rawPayload     String? // JSON of last provider response
+  lastSyncedAt   DateTime?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([provider, consignmentId])
+}
+
+/** Studio-added or corrected geography entries merged over the bundled BD dataset. */
+model GeoOverride {
+  id         String   @id @default(cuid())
+  level      String // district | upazila | area | postcode
+  parentId   String? // districtId for upazila/area/postcode; divisionId for district
+  en         String
+  bn         String?
+  code       String? // postcode
+  lat        Float?
+  lng        Float?
+  isHidden   Boolean  @default(false) // hide a bundled entry
+  targetKey  String? // bundled entry key being hidden/renamed
+  createdAt  DateTime @default(now())
+
+  @@index([level, parentId])
+}
+
+/** Privacy-friendly first-party analytics (no cookies, hashed IP). */
+model Visit {
+  id         String   @id @default(cuid())
+  day        String // YYYY-MM-DD
+  path       String
+  locale     String?
+  referrer   String?
+  utmSource  String?
+  utmMedium  String?
+  utmCampaign String?
+  country    String?
+  device     String? // mobile | tablet | desktop | tv | bot
+  browser    String?
+  ipHash     String // sha256(ip + daily salt)
+  visitorKey String // sha256(ipHash + ua) for unique counting
+  durationMs Int?
+  createdAt  DateTime @default(now())
+
+  @@index([day])
+  @@index([path])
+  @@index([visitorKey])
 }
 
 model OrderItem {

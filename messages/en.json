@@ -271,7 +271,26 @@
     "errPayment": "Please choose a payment method.",
     "errTrx": "Enter the Transaction ID from your payment.",
     "errSender": "Enter the number you paid from.",
-    "errConsent": "Please accept the terms to continue."
+    "errConsent": "Please accept the terms to continue.",
+    "bkash_checkout": "bKash",
+    "bkash_checkoutHint": "Pay securely with your bKash wallet (PIN + OTP).",
+    "nagad_checkout": "Nagad",
+    "nagad_checkoutHint": "Pay securely with your Nagad wallet.",
+    "aamarpay": "Card / Mobile banking (aamarPay)",
+    "aamarpayHint": "Visa, Mastercard, bKash, Nagad, Rocket and more.",
+    "shurjopay": "Card / Mobile banking (shurjoPay)",
+    "shurjopayHint": "Visa, Mastercard, bKash, Nagad, Rocket and more.",
+    "codFee": "Cash on delivery fee",
+    "division": "Division",
+    "upazila": "Upazila / Thana",
+    "area": "Area",
+    "detectLocation": "Use my location",
+    "detecting": "Detecting your location…",
+    "detected": "We guessed {district} from your location — please confirm.",
+    "detectFailed": "Could not detect your location. Please choose it below.",
+    "searchArea": "Search district, area or postcode",
+    "codFeeLine": "COD handling fee",
+    "codMaxOrder": "Cash on delivery is available for orders up to {amount}."
   },
   "tracking": {
     "title": "Track your order",
@@ -312,7 +331,11 @@
       "nagad": "Nagad",
       "sslcommerz": "Card / Mobile banking",
       "stripe": "International card",
-      "none": "—"
+      "none": "—",
+      "bkash_checkout": "bKash",
+      "nagad_checkout": "Nagad",
+      "aamarpay": "Card / Mobile banking",
+      "shurjopay": "Card / Mobile banking"
     }
   },
   "contact": {

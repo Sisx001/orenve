@@ -28,7 +28,18 @@ export const ORDER_STATUSES = [
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export const ORDER_CHANNELS = ["website", "whatsapp", "messenger", "manual"] as const;
-export const PAYMENT_METHODS = ["cod", "bkash", "nagad", "sslcommerz", "stripe", "none"] as const;
+/**
+ * cod            — cash on delivery
+ * bkash / nagad  — manual Send-Money + TrxID (verified in the studio)
+ * bkash_checkout — bKash Tokenized Checkout API (redirect)
+ * nagad_checkout — Nagad Payment Gateway API (redirect)
+ * sslcommerz / aamarpay / shurjopay — Bangladeshi aggregators (redirect)
+ * stripe         — international cards
+ */
+export const PAYMENT_METHODS = ["cod", "bkash", "nagad", "bkash_checkout", "nagad_checkout", "sslcommerz", "aamarpay", "shurjopay", "stripe", "none"] as const;
+export const COURIER_PROVIDERS = ["pathao", "steadfast", "redx", "paperfly", "manual"] as const;
+export type CourierProvider = (typeof COURIER_PROVIDERS)[number];
+export const SHIPMENT_STATUSES = ["booked", "picked", "in_transit", "delivered", "returned", "cancelled", "failed"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const PAYMENT_STATUSES = ["unpaid", "pending_verification", "paid", "failed", "refunded"] as const;
 export const COUPON_TYPES = ["percent", "fixed", "free_shipping"] as const;
