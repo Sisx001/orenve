@@ -1,0 +1,31 @@
+import { LocaleLink } from "@/components/store/LocaleLink";
+import { Reveal } from "@/components/store/Reveal";
+import { headlineLines } from "@/lib/store/richtext";
+import { cn } from "@/lib/utils";
+
+/** Large typographic statement on ink. One accent word per view. */
+export function ManifestoBlock({ eyebrow, title, text, link, button }: { eyebrow?: string; title: string; text?: string; link?: string; button?: string }) {
+  const lines = headlineLines(title);
+  return (
+    <section className="grain relative overflow-hidden bg-ink text-bone">
+      <div className="container-page section relative">
+        <Reveal className="mx-auto max-w-4xl text-center">
+          {eyebrow && <p className="eyebrow mb-7 text-bone/60">{eyebrow}</p>}
+          <h2 className="display text-balance text-display-lg">
+            {lines.map((l, i) => (
+              <span key={i} className={cn("block", i % 2 === 1 && "display-italic text-brass")}>
+                {l}
+              </span>
+            ))}
+          </h2>
+          {text && <p className="mx-auto mt-9 max-w-xl leading-relaxed text-bone/70">{text}</p>}
+          {button && link && (
+            <LocaleLink href={link} className="btn-outline mt-11 border-bone/50 text-bone hover:bg-bone hover:text-ink">
+              {button}
+            </LocaleLink>
+          )}
+        </Reveal>
+      </div>
+    </section>
+  );
+}
