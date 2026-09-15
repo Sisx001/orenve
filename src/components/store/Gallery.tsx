@@ -80,11 +80,11 @@ export function Gallery({ images, video, className }: { images: GalleryImage[]; 
         ))}
 
         {features.productVideo && video && (
-          <div className="relative aspect-[3/4] w-full overflow-hidden bg-ink">
+          <div className="relative aspect-[3/4] w-full overflow-hidden bg-coal">
             {showVideo ? (
               <video src={video} controls autoPlay playsInline className="h-full w-full object-cover" />
             ) : (
-              <button type="button" onClick={() => setShowVideo(true)} className="group absolute inset-0 flex items-center justify-center bg-ink/70 text-paper">
+              <button type="button" onClick={() => setShowVideo(true)} className="group absolute inset-0 flex items-center justify-center bg-coal/70 text-snow">
                 <span className="flex items-center gap-3 border border-paper/40 px-6 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.16em] transition group-hover:border-paper">
                   <Play className="h-3.5 w-3.5" aria-hidden />
                   {t("home.videoEyebrow")}
@@ -168,7 +168,7 @@ function Lightbox({
   const img = index === null ? null : images[index];
 
   return (
-    <Modal open={index !== null} onClose={onClose} side="center" className="h-[92dvh] max-h-[92dvh] w-full max-w-6xl bg-ink text-bone" title={t("product.enlarge", { n: (index ?? 0) + 1 })}>
+    <Modal open={index !== null} onClose={onClose} side="center" className="h-[92dvh] max-h-[92dvh] w-full max-w-6xl bg-coal text-snow" title={t("product.enlarge", { n: (index ?? 0) + 1 })}>
       {img && (
         <div className="relative flex h-full min-h-[60vh] items-center justify-center overflow-hidden">
           <motion.img
@@ -187,14 +187,14 @@ function Lightbox({
 
           <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between gap-3">
             <div className="flex items-center gap-1">
-              <button type="button" onClick={() => setScale((s) => Math.max(1, s - 0.4))} aria-label="−" className="border border-bone/30 p-2 hover:border-bone">
+              <button type="button" onClick={() => setScale((s) => Math.max(1, s - 0.4))} aria-label="−" className="border border-snow/30 p-2 hover:border-snow">
                 <Minus className="h-4 w-4" aria-hidden />
               </button>
-              <button type="button" onClick={() => setScale((s) => Math.min(4, s + 0.4))} aria-label="+" className="border border-bone/30 p-2 hover:border-bone">
+              <button type="button" onClick={() => setScale((s) => Math.min(4, s + 0.4))} aria-label="+" className="border border-snow/30 p-2 hover:border-snow">
                 <Plus className="h-4 w-4" aria-hidden />
               </button>
             </div>
-            <span className="text-[0.62rem] uppercase tracking-[0.18em] text-bone/70">
+            <span className="text-[0.62rem] uppercase tracking-[0.18em] text-snow/70">
               {index !== null ? index + 1 : 0} / {images.length}
             </span>
             {images.length > 1 && (
@@ -203,7 +203,7 @@ function Lightbox({
                   type="button"
                   onClick={() => index !== null && onIndex((index - 1 + images.length) % images.length)}
                   aria-label={t("common.previous")}
-                  className="border border-bone/30 p-2 hover:border-bone"
+                  className="border border-snow/30 p-2 hover:border-snow"
                 >
                   <ChevronLeft className="h-4 w-4" aria-hidden />
                 </button>
@@ -211,7 +211,7 @@ function Lightbox({
                   type="button"
                   onClick={() => index !== null && onIndex((index + 1) % images.length)}
                   aria-label={t("common.next")}
-                  className="border border-bone/30 p-2 hover:border-bone"
+                  className="border border-snow/30 p-2 hover:border-snow"
                 >
                   <ChevronRight className="h-4 w-4" aria-hidden />
                 </button>

@@ -51,7 +51,7 @@ export function Hero({ eyebrow, title, subtitle, cta, ctaLink = "/shop", seconda
   const subLines = subtitle ? headlineLines(subtitle) : [];
 
   return (
-    <section ref={ref} className="relative isolate flex min-h-[92dvh] items-end overflow-hidden bg-ink text-bone" aria-label={lines.join(" ")}>
+    <section ref={ref} className="relative isolate flex min-h-[92dvh] items-end overflow-hidden bg-coal text-snow" aria-label={lines.join(" ")}>
       {/* media */}
       <motion.div className="absolute inset-0 -z-10" style={reduced ? undefined : { y: mediaY, scale: mediaScale }}>
         {video ? (
@@ -84,7 +84,7 @@ export function Hero({ eyebrow, title, subtitle, cta, ctaLink = "/shop", seconda
             </div>
           ))
         )}
-        <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-ink via-ink/25 to-ink/10" style={{ opacity: Math.min(1, Math.max(0, overlay)) + 0.35 }} />
+        <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-coal via-coal/25 to-coal/10" style={{ opacity: Math.min(1, Math.max(0, overlay)) + 0.35 }} />
       </motion.div>
       <span aria-hidden className="grain absolute inset-0 -z-10" />
 
@@ -92,7 +92,7 @@ export function Hero({ eyebrow, title, subtitle, cta, ctaLink = "/shop", seconda
       <motion.div className="container-page w-full pb-20 pt-40 md:pb-28" style={reduced ? undefined : { y: contentY, opacity: contentOpacity }}>
         {eyebrow && (
           <motion.p
-            className="eyebrow text-bone/70"
+            className="eyebrow text-snow/70"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: EASE, delay: 0.15 }}
@@ -118,7 +118,7 @@ export function Hero({ eyebrow, title, subtitle, cta, ctaLink = "/shop", seconda
 
         {subLines.length > 0 && (
           <motion.p
-            className="mt-7 max-w-md text-[0.95rem] leading-relaxed text-bone/80"
+            className="mt-7 max-w-md text-[0.95rem] leading-relaxed text-snow/80"
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, ease: EASE, delay: 0.55 }}
@@ -138,19 +138,19 @@ export function Hero({ eyebrow, title, subtitle, cta, ctaLink = "/shop", seconda
           transition={{ duration: 0.9, ease: EASE, delay: 0.7 }}
         >
           {cta && (
-            <LocaleLink href={ctaLink} className="btn border-bone bg-bone text-ink hover:border-oxide hover:bg-oxide hover:text-paper">
+            <LocaleLink href={ctaLink} className="btn border-snow bg-snow text-coal hover:border-oxide hover:bg-oxide hover:text-snow">
               {cta}
             </LocaleLink>
           )}
           {secondary && (
-            <LocaleLink href={secondaryLink} className="btn-outline border-bone/50 text-bone hover:bg-bone hover:text-ink">
+            <LocaleLink href={secondaryLink} className="btn-outline border-snow/50 text-snow hover:bg-snow hover:text-coal">
               {secondary}
             </LocaleLink>
           )}
         </motion.div>
 
         <div className="mt-16 flex flex-wrap items-end justify-between gap-6">
-          {caption && <p className="display-italic max-w-xs text-sm text-bone/60">{caption}</p>}
+          {caption && <p className="display-italic max-w-xs text-sm text-snow/60">{caption}</p>}
 
           <div className="flex items-center gap-6">
             {!video && frames.length > 1 && (
@@ -163,12 +163,12 @@ export function Hero({ eyebrow, title, subtitle, cta, ctaLink = "/shop", seconda
                     aria-selected={i === slide}
                     aria-label={`${i + 1} / ${frames.length}`}
                     onClick={() => setSlide(i)}
-                    className={cn("h-px w-10 transition-all duration-500", i === slide ? "bg-bone" : "bg-bone/30 hover:bg-bone/60")}
+                    className={cn("h-px w-10 transition-all duration-500", i === slide ? "bg-snow" : "bg-snow/30 hover:bg-snow/60")}
                   />
                 ))}
               </div>
             )}
-            <span className="flex items-center gap-2 text-[0.6rem] uppercase tracking-[0.18em] text-bone/50">
+            <span className="flex items-center gap-2 text-[0.6rem] uppercase tracking-[0.18em] text-snow/50">
               <ArrowDown className="h-3 w-3 animate-pulseDot" aria-hidden />
               {t("common.scroll")}
             </span>

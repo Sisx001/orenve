@@ -32,6 +32,8 @@ const config: Config = {
         success: "rgb(var(--c-success) / <alpha-value>)",
         danger: "rgb(var(--c-danger) / <alpha-value>)",
         warning: "rgb(var(--c-warning) / <alpha-value>)",
+        snow: "rgb(var(--c-snow) / <alpha-value>)", // theme-invariant light (text over imagery)
+        coal: "rgb(var(--c-coal) / <alpha-value>)", // theme-invariant dark
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],

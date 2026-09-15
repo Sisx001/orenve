@@ -21,7 +21,7 @@ export function VideoBlock({ url, poster, eyebrow, title }: { url: string; poste
               {title && <h2 className="display mt-4 text-display-sm">{title}</h2>}
             </div>
           )}
-          <div className="relative overflow-hidden bg-ink">
+          <div className="relative overflow-hidden bg-coal">
             <span className="block aspect-video w-full">
               {playing ? (
                 <video src={url} poster={poster} controls autoPlay playsInline className="h-full w-full object-cover" />
@@ -31,9 +31,9 @@ export function VideoBlock({ url, poster, eyebrow, title }: { url: string; poste
                   <button
                     type="button"
                     onClick={() => setPlaying(true)}
-                    className="group absolute inset-0 flex items-center justify-center bg-ink/40 text-bone transition hover:bg-ink/25"
+                    className="group absolute inset-0 flex items-center justify-center bg-coal/40 text-snow transition hover:bg-coal/25"
                   >
-                    <span className="flex items-center gap-3 border border-bone/50 px-7 py-3.5 text-[0.65rem] font-semibold uppercase tracking-[0.16em] transition group-hover:border-bone">
+                    <span className="flex items-center gap-3 border border-snow/50 px-7 py-3.5 text-[0.65rem] font-semibold uppercase tracking-[0.16em] transition group-hover:border-snow">
                       <Play className="h-3.5 w-3.5" aria-hidden />
                       {t("home.videoEyebrow")}
                     </span>

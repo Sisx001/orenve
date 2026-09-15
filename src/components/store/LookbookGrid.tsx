@@ -32,7 +32,7 @@ export function LookbookGrid({ items }: { items: LookbookItem[] }) {
                 i % 5 === 0 ? "aspect-[3/4]" : i % 5 === 3 ? "aspect-square" : "aspect-[4/5]",
               )}
             />
-            <span aria-hidden className="absolute inset-0 bg-ink/0 transition-colors duration-700 group-hover:bg-ink/25" />
+            <span aria-hidden className="absolute inset-0 bg-ink/0 transition-colors duration-700 group-hover:bg-coal/25" />
 
             {it.slug && (
               <figcaption className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
@@ -54,7 +54,7 @@ export function LookbookGrid({ items }: { items: LookbookItem[] }) {
                     {t("home.shopTheLook")}
                   </LocaleLink>
                 )}
-                {it.caption && <span className="display-italic text-right text-xs text-bone drop-shadow">{it.caption}</span>}
+                {it.caption && <span className="display-italic text-right text-xs text-snow drop-shadow">{it.caption}</span>}
               </figcaption>
             )}
           </figure>

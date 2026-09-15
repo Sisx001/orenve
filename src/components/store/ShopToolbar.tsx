@@ -191,7 +191,7 @@ export function ShopToolbar({
           <button type="button" onClick={() => setPanel(true)} aria-expanded={panel} className="btn-ghost lg:hidden">
             <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
             {t("shop.filters")}
-            {activeCount > 0 && <span className="ml-1 bg-oxide px-1.5 text-[0.55rem] font-bold leading-4 text-paper">{activeCount}</span>}
+            {activeCount > 0 && <span className="ml-1 bg-oxide px-1.5 text-[0.55rem] font-bold leading-4 text-snow">{activeCount}</span>}
           </button>
           <p className="text-[0.68rem] uppercase tracking-[0.14em] text-muted" aria-live="polite">
             {t("shop.results", { count: resultCount })}

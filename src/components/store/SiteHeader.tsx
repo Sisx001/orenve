@@ -77,7 +77,7 @@ export function SiteHeader({ categories, collections }: { categories: NavCategor
   return (
     <>
       {config.brand.showAnnouncement && announcement && (
-        <div className="relative z-50 bg-ink text-bone">
+        <div className="relative z-50 bg-coal text-snow">
           <div className="container-page flex items-center justify-center py-2.5 text-center">
             <LocaleLink href={config.brand.announcementLink || "/shop"} className="text-[0.66rem] font-medium uppercase tracking-[0.16em] hover:text-brass">
               {announcement}
@@ -184,7 +184,7 @@ export function SiteHeader({ categories, collections }: { categories: NavCategor
             {features.wishlist && (
               <LocaleLink href="/wishlist" aria-label={t("common.wishlist")} className="relative p-1.5 hover:text-oxide">
                 <Heart className="h-[1.1rem] w-[1.1rem]" aria-hidden />
-                {wishCount > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-[1rem] bg-oxide px-1 text-center text-[0.55rem] font-bold leading-4 text-paper">{wishCount}</span>}
+                {wishCount > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-[1rem] bg-oxide px-1 text-center text-[0.55rem] font-bold leading-4 text-snow">{wishCount}</span>}
               </LocaleLink>
             )}
 

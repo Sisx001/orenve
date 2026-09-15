@@ -109,7 +109,7 @@ export function Switch({ checked, onChange, label, hint, disabled, id }: { check
 export function Badge({ children, tone = "neutral", className }: { children: ReactNode; tone?: "neutral" | "accent" | "success" | "danger" | "warning" | "brass"; className?: string }) {
   const tones = {
     neutral: "bg-bone text-ink border-line",
-    accent: "bg-oxide text-paper border-oxide",
+    accent: "bg-oxide text-snow border-oxide",
     success: "bg-success/10 text-success border-success/30",
     danger: "bg-danger/10 text-danger border-danger/30",
     warning: "bg-warning/10 text-warning border-warning/30",
@@ -186,7 +186,7 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <div className={cn("fixed z-[90]", position)} role="dialog" aria-modal="true" data-testid={testId}>
-          <motion.div className="fixed inset-0 bg-ink/50 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+          <motion.div className="fixed inset-0 bg-coal/60 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <motion.div
             ref={ref}
             className={cn("relative flex flex-col overflow-hidden bg-paper text-ink shadow-2xl", panel, className)}
@@ -216,7 +216,7 @@ export function Modal({
 export function EmptyState({ title, text, action }: { title: ReactNode; text?: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center py-24 text-center">
-      <span className="display text-5xl text-line">O/</span>
+      <span aria-hidden className="display text-5xl text-line">O/</span>
       <h2 className="display mt-6 text-display-sm">{title}</h2>
       {text && <p className="mt-3 max-w-md text-muted">{text}</p>}
       {action && <div className="mt-8">{action}</div>}

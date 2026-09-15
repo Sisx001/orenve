@@ -81,10 +81,10 @@ export function ProductCard({
           <span className="bg-paper/95 px-2.5 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-ink">{product.badge}</span>
         )}
         {product.compareAtPrice != null && product.compareAtPrice > product.price && (
-          <span className="bg-oxide px-2.5 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-paper">{t("common.sale")}</span>
+          <span className="bg-oxide px-2.5 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-snow">{t("common.sale")}</span>
         )}
         {features.stockBadges && !product.inStock && (
-          <span className="bg-ink/85 px-2.5 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-paper">{t("common.soldOut")}</span>
+          <span className="bg-coal/85 px-2.5 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-snow">{t("common.soldOut")}</span>
         )}
       </span>
     </span>

@@ -161,7 +161,7 @@ export function ConciergeWidget() {
               exit={{ opacity: 0, y: 12 }}
               transition={{ duration: DUR.fast, ease: EASE }}
               onClick={() => setOpen(true)}
-              className="flex items-center gap-2.5 border border-ink bg-ink px-5 py-3.5 text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-paper shadow-xl transition hover:border-oxide hover:bg-oxide"
+              className="flex items-center gap-2.5 border border-coal bg-coal px-5 py-3.5 text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-snow shadow-xl transition hover:border-oxide hover:bg-oxide"
             >
               <MessageCircle className="h-4 w-4" aria-hidden />
               {t("ai.open")}
@@ -179,7 +179,7 @@ export function ConciergeWidget() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setOpen(false)}
-              className="fixed inset-0 z-[85] bg-ink/40 backdrop-blur-[2px] md:hidden"
+              className="fixed inset-0 z-[85] bg-coal/50 backdrop-blur-[2px] md:hidden"
             />
             <motion.div
               role="dialog"
