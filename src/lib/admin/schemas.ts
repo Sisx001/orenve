@@ -336,11 +336,25 @@ export const userUpdateSchema = z.object({
 /* ───────────────────────────── Helpers ───────────────────────────── */
 
 /** `en`/`bn` pair from `<name>_en` / `<name>_bn` form fields. */
+/**
+ * Reads every `${base}_<locale>` field the form submitted (en, bn and any
+ * language registered in the studio). en/bn are always present so existing
+ * callers keep their `{ en, bn }` shape; extra locales ride along in the JSON.
+ */
 export function readI18n(fd: FormData, base: string): I18nPair {
-  return {
+  const out: Record<string, string> = {
     en: String(fd.get(`${base}_en`) ?? "").slice(0, 6000),
     bn: String(fd.get(`${base}_bn`) ?? "").slice(0, 6000),
   };
+  const prefix = `${base}_`;
+  for (const key of fd.keys()) {
+    if (!key.startsWith(prefix)) continue;
+    const code = key.slice(prefix.length);
+    if (!/^[a-z]{2,3}$/.test(code) || code in out) continue;
+    const v = String(fd.get(key) ?? "").slice(0, 6000);
+    if (v.trim()) out[code] = v;
+  }
+  return out as I18nPair;
 }
 
 export function readBool(fd: FormData, name: string): boolean {

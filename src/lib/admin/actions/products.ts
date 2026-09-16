@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { toJson, parseJson } from "@/lib/json";
 import { slugify } from "@/lib/utils";
+import { after } from "next/server";
+import { autoTranslateRecord } from "@/lib/i18n/translate";
 import { authorize, fail, revalidateStudio, runAction, succeed, type ActionState } from "@/lib/admin/guard";
 import {
   productSchema,
@@ -232,6 +234,8 @@ export async function saveProductAction(_prev: ActionState, fd: FormData): Promi
       status: product.status,
       variants: variants.length,
     });
+    // Optional: translate the saved product into every enabled machine language once the response is sent.
+    after(() => autoTranslateRecord("product", product.id));
     revalidateStudio("/admin/products", `/admin/products/${product.id}`, "/admin/inventory");
 
     if (!input.id) return succeed("Product created.", { id: product.id, created: "1" });

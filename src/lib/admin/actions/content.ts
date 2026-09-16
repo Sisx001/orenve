@@ -6,6 +6,8 @@ import { audit } from "@/lib/audit";
 import { toJson } from "@/lib/json";
 import { slugify } from "@/lib/utils";
 import { BLOCK_TYPES } from "@/lib/constants";
+import { after } from "next/server";
+import { autoTranslateRecord } from "@/lib/i18n/translate";
 import { authorize, fail, revalidateStudio, runAction, succeed, type ActionState } from "@/lib/admin/guard";
 import { blockSchema, pageSchema, readBool, readI18n, readInt, readJson } from "@/lib/admin/schemas";
 
@@ -50,6 +52,7 @@ export async function savePageAction(_prev: ActionState, fd: FormData): Promise<
     const row = input.id ? await db.page.update({ where: { id: input.id }, data }) : await db.page.create({ data });
     created = input.id ? null : row.id;
     await audit(user.id, input.id ? "page.update" : "page.create", "page", row.id, { slug: row.slug, published: row.isPublished });
+    after(() => autoTranslateRecord("page", row.id));
     revalidateStudio("/admin/pages", `/admin/pages/${row.id}`);
     return succeed("Page saved.", { id: row.id });
   });
@@ -99,6 +102,7 @@ export async function saveBlockAction(_prev: ActionState, fd: FormData): Promise
       data: readJson<Record<string, unknown>>(fd, "data", {}),
     });
 
+    let blockId = input.id ?? null;
     if (input.id) {
       await db.block.update({
         where: { id: input.id },
@@ -106,7 +110,7 @@ export async function saveBlockAction(_prev: ActionState, fd: FormData): Promise
       });
     } else {
       const last = await db.block.findFirst({ where: { page: input.page }, orderBy: { position: "desc" }, select: { position: true } });
-      await db.block.create({
+      const created = await db.block.create({
         data: {
           page: input.page,
           type: input.type,
@@ -115,9 +119,14 @@ export async function saveBlockAction(_prev: ActionState, fd: FormData): Promise
           data: toJson(input.data),
         },
       });
+      blockId = created.id;
     }
 
-    await audit(user.id, input.id ? "block.update" : "block.create", "block", input.id ?? null, { type: input.type, page: input.page });
+    await audit(user.id, input.id ? "block.update" : "block.create", "block", blockId, { type: input.type, page: input.page });
+    if (blockId) {
+      const id = blockId;
+      after(() => autoTranslateRecord("block", id));
+    }
     revalidateStudio("/admin/homepage");
     return succeed("Block saved.");
   });

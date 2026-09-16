@@ -31,6 +31,12 @@ export type ThemeStyleProps = {
   tokens?: Record<string, string>;
   darkTokens?: Record<string, string>;
   customCss?: string;
+  /**
+   * Extra storefront languages. Each one with a font gets that family loaded
+   * and scoped to `[lang="xx"]`, so a studio-added language can carry its own
+   * script font without a rebuild.
+   */
+  languages?: { code: string; font: string | null; dir: string }[];
 };
 
 export function googleFontsHref(families: string[]): string | null {
@@ -44,7 +50,10 @@ const esc = (s: string) => s.replace(/[^a-zA-Z0-9 ,'-]/g, "");
 const safeVar = (k: string) => /^--[a-z0-9-]+$/i.test(k);
 const safeVal = (v: string) => /^[\w\s.#%(),'"-]+$/.test(v);
 
-export function ThemeStyle({ accent, brass, radius, fontDisplay, fontSans, fontBangla, tokens, darkTokens, customCss }: ThemeStyleProps) {
+/** en/bn already have typography rules in globals.css — never re-declare them. */
+const SCOPED_SKIP = new Set(["en", "bn"]);
+
+export function ThemeStyle({ accent, brass, radius, fontDisplay, fontSans, fontBangla, tokens, darkTokens, customCss, languages }: ThemeStyleProps) {
   const vars: string[] = [];
   const a = hexToRgb(accent);
   const b = hexToRgb(brass);
@@ -64,8 +73,17 @@ export function ThemeStyle({ accent, brass, radius, fontDisplay, fontSans, fontB
   for (const [k, v] of Object.entries(darkTokens ?? {})) if (safeVar(k) && safeVal(v)) dark[k] = v;
   const darkVars = Object.entries(dark).map(([k, v]) => `${k}:${v}`);
 
-  const href = googleFontsHref([fontDisplay, fontSans, fontBangla]);
-  const css = `:root{${vars.join(";")}}${darkVars.length ? `[data-theme="dark"]{${darkVars.join(";")}}` : ""}${customCss ? `\n${customCss.replace(/<\/style/gi, "")}` : ""}`;
+  // Per-language script fonts for studio-added languages.
+  const scoped = (languages ?? []).filter((l) => l.font && /^[a-z]{2,3}$/.test(l.code) && !SCOPED_SKIP.has(l.code));
+  const langCss = scoped
+    .map((l) => {
+      const family = esc(l.font as string);
+      return `[lang="${l.code}"]{--font-sans:'${family}',sans-serif;--font-display:'${family}',serif}`;
+    })
+    .join("");
+
+  const href = googleFontsHref([fontDisplay, fontSans, fontBangla, ...scoped.map((l) => l.font as string)]);
+  const css = `:root{${vars.join(";")}}${darkVars.length ? `[data-theme="dark"]{${darkVars.join(";")}}` : ""}${langCss}${customCss ? `\n${customCss.replace(/<\/style/gi, "")}` : ""}`;
   return (
     <>
       {href && (

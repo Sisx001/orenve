@@ -25,6 +25,7 @@ export const SETTINGS_CHILDREN = [
   { href: "/admin/settings/site", label: "Site mode" },
   { href: "/admin/settings/contact", label: "Contact channels" },
   { href: "/admin/settings/ai", label: "AI concierge" },
+  { href: "/admin/settings/languages", label: "Languages & translation" },
   { href: "/admin/settings/translations", label: "Translations" },
 ];
 
@@ -80,6 +81,9 @@ export const CRUMB_LABELS: Record<string, string> = {
   "/admin/shipping": "Shipping zones",
   "/admin/settings/couriers": "Couriers",
   "/admin/settings/address": "Address & delivery areas",
+  "/admin/settings/languages": "Languages & translation",
+  "/admin/concierge/test": "Test console",
+  "/admin/concierge/requests": "Requests",
   "/admin/catalog": "Collections & categories",
   "/admin/homepage": "Homepage",
   "/admin/pages": "Pages",

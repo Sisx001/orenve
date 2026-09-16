@@ -7,10 +7,8 @@ import { SUPPORTED_LOCALES } from "@/lib/constants";
 import { authorize, fail, revalidateStudio, runAction, succeed, type ActionState } from "@/lib/admin/guard";
 import { readBool, readI18n, readInt, readJson, readMoney } from "@/lib/admin/schemas";
 
-const pairOf = (fd: FormData, base: string) => {
-  const p = readI18n(fd, base);
-  return { en: p.en, bn: p.bn };
-};
+/** Every locale the form submitted (en, bn + registered languages). Empty extras are dropped by readI18n. */
+const pairOf = (fd: FormData, base: string): Record<string, string> => readI18n(fd, base);
 const num = (fd: FormData, name: string, fallback: number) => {
   const raw = String(fd.get(name) ?? "").trim();
   if (!raw) return fallback;
@@ -226,6 +224,16 @@ export async function saveAiAction(_prev: ActionState, fd: FormData): Promise<Ac
     // An empty field means "leave the stored key alone".
     const apiKey = submittedKey.trim() === "" ? current.apiKey : submittedKey.trim();
 
+    // Parse size advisor chart (validate JSON, fallback to current)
+    const chartRaw = String(fd.get("sizeAdvisorChart") ?? "").trim();
+    let sizeAdvisorChart = current.sizeAdvisor.chart;
+    if (chartRaw) {
+      try {
+        const parsed = JSON.parse(chartRaw);
+        if (Array.isArray(parsed)) sizeAdvisorChart = chartRaw;
+      } catch { /* keep existing */ }
+    }
+
     await saveSetting("ai", {
       enabled: readBool(fd, "enabled"),
       provider: "openai_compatible",
@@ -244,6 +252,17 @@ export async function saveAiAction(_prev: ActionState, fd: FormData): Promise<Ac
       rateLimitPerHour: Math.max(1, readInt(fd, "rateLimitPerHour", 60)),
       logConversations: readBool(fd, "logConversations"),
       handoffWhatsapp: readBool(fd, "handoffWhatsapp"),
+      streaming: readBool(fd, "streaming"),
+      showProductCards: readBool(fd, "showProductCards"),
+      allowChangeRequests: readBool(fd, "allowChangeRequests"),
+      sizeAdvisor: {
+        enabled: readBool(fd, "sizeAdvisorEnabled"),
+        chart: sizeAdvisorChart,
+        note: pairOf(fd, "sizeAdvisorNote"),
+      },
+      brandVoice: String(fd.get("brandVoice") ?? current.brandVoice).slice(0, 2000),
+      writerEnabled: readBool(fd, "writerEnabled"),
+      writerTemperature: Math.min(1.5, Math.max(0, num(fd, "writerTemperature", 0.7))),
     });
 
     await audit(user.id, "settings.ai", "setting", "ai", { model: String(fd.get("model") ?? ""), keyChanged: submittedKey.trim() !== "" });
@@ -277,9 +296,9 @@ export async function saveTranslationsAction(_prev: ActionState, fd: FormData): 
       const locale = String(row.locale ?? "").slice(0, 5);
       const fullKey = String(row.key ?? "");
       if (!locale || !fullKey) continue;
-      const dot = fullKey.indexOf(".");
-      const namespace = dot > 0 ? fullKey.slice(0, dot) : "common";
-      const key = dot > 0 ? fullKey.slice(dot + 1) : fullKey;
+      // Same storage shape as the translation engine and the server loader: "common" + full dotted key.
+      const namespace = "common";
+      const key = fullKey;
       const value = String(row.value ?? "");
 
       if (value.trim() === "") {

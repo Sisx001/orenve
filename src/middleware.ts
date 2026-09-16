@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { COOKIE_CSRF, COOKIE_LOCALE, COOKIE_SESSION, DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/lib/constants";
+import { COOKIE_CSRF, COOKIE_LOCALE, COOKIE_SESSION, DEFAULT_LOCALE, LOCALE_SEGMENT_RE, SUPPORTED_LOCALES } from "@/lib/constants";
 import { looksLikeCsrfToken, mintCsrfTokenEdge } from "@/lib/auth/csrf-edge";
 
 const PUBLIC_FILE = /\.(.*)$/;
 const LOCALES = SUPPORTED_LOCALES as readonly string[];
 
 function pickLocale(req: NextRequest): string {
+  // The cookie is set by the [locale] layout only for registered languages, so any well-formed value is trusted here.
   const cookie = req.cookies.get(COOKIE_LOCALE)?.value;
-  if (cookie && LOCALES.includes(cookie)) return cookie;
+  if (cookie && LOCALE_SEGMENT_RE.test(cookie)) return cookie;
   const header = req.headers.get("accept-language") ?? "";
   for (const part of header.split(",")) {
     const code = part.split(";")[0].trim().toLowerCase().split("-")[0];
@@ -53,10 +54,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Any plausible locale segment passes; src/app/[locale]/layout.tsx 404s unknown languages.
   const first = pathname.split("/")[1];
-  if (LOCALES.includes(first)) {
+  if (LOCALES.includes(first) || LOCALE_SEGMENT_RE.test(first)) {
     const res = NextResponse.next();
-    if (req.cookies.get(COOKIE_LOCALE)?.value !== first) {
+    // Only built-in codes are remembered here; the [locale] layout sets the cookie for
+    // registered extra languages after validating them, so an unknown /xx never sticks.
+    if (LOCALES.includes(first) && req.cookies.get(COOKIE_LOCALE)?.value !== first) {
       res.cookies.set(COOKIE_LOCALE, first, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
     }
     return withCsrf(req, res);

@@ -1,6 +1,6 @@
 import en from "../../../messages/en.json";
 import bn from "../../../messages/bn.json";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/lib/constants";
+import { DEFAULT_LOCALE, LOCALE_SEGMENT_RE, SUPPORTED_LOCALES } from "@/lib/constants";
 
 export type Locale = string;
 export type Dictionary = typeof en;
@@ -13,14 +13,20 @@ export const localeMeta: Record<string, { name: string; nativeName: string; dir:
   // Add more locales here + a messages/<code>.json file (or via the studio translations editor).
 };
 
-export function isSupportedLocale(l: string | undefined | null): l is Locale {
+/** Built-in locales shipped as messages/*.json. Extra languages are registered at runtime (see ./registry). */
+export function isBuiltInLocale(l: string | undefined | null): l is Locale {
   return !!l && (SUPPORTED_LOCALES as readonly string[]).includes(l);
 }
 
-export function normalizeLocale(l: string | undefined | null): Locale {
+/** Shape check only — a plausible locale segment. Use the registry (server) or config.locales (client) for validity. */
+export function isSupportedLocale(l: string | undefined | null): l is Locale {
+  return !!l && LOCALE_SEGMENT_RE.test(l);
+}
+
+export function normalizeLocale(l: string | undefined | null, known: readonly string[] = SUPPORTED_LOCALES): Locale {
   if (!l) return DEFAULT_LOCALE;
   const short = l.toLowerCase().split(/[-_]/)[0];
-  return isSupportedLocale(short) ? short : DEFAULT_LOCALE;
+  return known.includes(short) ? short : DEFAULT_LOCALE;
 }
 
 function deepGet(obj: unknown, path: string): unknown {
@@ -68,13 +74,20 @@ export function createTranslator(locale: Locale, dict: Dictionary): Translator {
   return t;
 }
 
+const LOCALE_PREFIX_RE = /^\/([a-z]{2,3})(?=\/|$)/;
+
 export function localizedPath(path: string, locale: Locale) {
-  const clean = path.replace(/^\/(en|bn)(?=\/|$)/, "") || "/";
+  const clean = path.replace(LOCALE_PREFIX_RE, "") || "/";
   return `/${locale}${clean === "/" ? "" : clean}`;
 }
 
 export function stripLocale(pathname: string) {
-  return pathname.replace(/^\/(en|bn)(?=\/|$)/, "") || "/";
+  return pathname.replace(LOCALE_PREFIX_RE, "") || "/";
+}
+
+/** The locale prefix of a pathname, if any ("/fr/shop" → "fr"). */
+export function localeOf(pathname: string): string | null {
+  return LOCALE_PREFIX_RE.exec(pathname)?.[1] ?? null;
 }
 
 export { en as defaultDictionary };

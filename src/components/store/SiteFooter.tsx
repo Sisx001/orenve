@@ -52,6 +52,10 @@ export function SiteFooter({ pages }: { pages: FooterPage[] }) {
 
   const statementLines = headlineLines(t("footer.statement"));
 
+  // Honest labelling: unreviewed machine languages say so, built-ins never do.
+  const current = config.locales.find((l) => l.code === locale);
+  const showMachineNote = config.i18n.showMachineBadge && Boolean(current && current.isMachine && !current.builtIn);
+
   return (
     <footer className="relative mt-auto border-t border-line bg-bone/40">
       <div className="container-page py-16 md:py-24">
@@ -125,7 +129,16 @@ export function SiteFooter({ pages }: { pages: FooterPage[] }) {
           </div>
         )}
 
-        <div className="mt-10 flex flex-col-reverse items-start justify-between gap-6 border-t border-line pt-8 text-[0.66rem] uppercase tracking-[0.16em] text-muted sm:flex-row sm:items-center">
+        {showMachineNote && (
+          <p className="mt-10 border-t border-line pt-8 text-xs text-muted">{t("common.machineTranslated")}</p>
+        )}
+
+        <div
+          className={cn(
+            "flex flex-col-reverse items-start justify-between gap-6 border-t border-line pt-8 text-[0.66rem] uppercase tracking-[0.16em] text-muted sm:flex-row sm:items-center",
+            showMachineNote ? "mt-8 border-t-0 pt-0" : "mt-10",
+          )}
+        >
           <p>{t("footer.copyright", { year: new Date().getFullYear(), brand: config.brand.name || "ORYNVE" })}</p>
           <p className="flex items-center gap-3">
             <span>{t("common.madeInBangladesh")}</span>

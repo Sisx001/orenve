@@ -4,6 +4,8 @@ export type Role = (typeof ROLES)[number];
 /** Which roles may do what. Owner can do everything. */
 export const PERMISSIONS: Record<string, Role[]> = {
   "settings.write": ["owner", "admin"],
+  "i18n.write": ["owner", "admin", "editor"],
+  "ai.write": ["owner", "admin", "editor"],
   "users.manage": ["owner"],
   "products.write": ["owner", "admin", "editor"],
   "content.write": ["owner", "admin", "editor"],
@@ -60,6 +62,8 @@ export const BLOCK_TYPES = [
 
 export const SUPPORTED_LOCALES = ["en", "bn"] as const;
 export const DEFAULT_LOCALE = "en";
+/** Shape of a locale path segment (BCP-47 primary subtag). Validity is decided by the locale registry. */
+export const LOCALE_SEGMENT_RE = /^[a-z]{2,3}$/;
 
 export const BD_DISTRICTS = [
   "Dhaka","Gazipur","Narayanganj","Tangail","Kishoreganj","Manikganj","Munshiganj","Narsingdi","Faridpur","Gopalganj","Madaripur","Rajbari","Shariatpur",

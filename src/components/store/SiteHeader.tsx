@@ -7,8 +7,8 @@ import { Heart, Menu, Moon, Search, ShoppingBag, Sun, X, ChevronDown } from "luc
 import { useCart } from "@/hooks/useCart";
 import { useT, useLocale } from "@/lib/i18n/client";
 import { useConfig } from "@/components/providers/ConfigProvider";
-import { localeMeta, localizedPath, stripLocale } from "@/lib/i18n";
-import { COOKIE_LOCALE, SUPPORTED_LOCALES } from "@/lib/constants";
+import { localizedPath, stripLocale } from "@/lib/i18n";
+import { COOKIE_LOCALE } from "@/lib/constants";
 import { i18nText } from "@/lib/json";
 import { Logo } from "@/components/brand/Logo";
 import { LocaleLink } from "@/components/store/LocaleLink";
@@ -27,6 +27,7 @@ export function SiteHeader({ categories, collections }: { categories: NavCategor
   const pathname = usePathname();
   const { config, currency, currencies, setCurrency, theme, setTheme } = useConfig();
   const features = config.features;
+  const locales = config.locales;
 
   const [condensed, setCondensed] = useState(false);
   const [mega, setMega] = useState(false);
@@ -136,17 +137,18 @@ export function SiteHeader({ categories, collections }: { categories: NavCategor
               </LocaleLink>
             ))}
 
-            {features.languageSwitcher && SUPPORTED_LOCALES.length > 1 && (
+            {features.languageSwitcher && locales.length > 1 && (
               <div className="hidden items-center gap-1 text-[0.66rem] font-semibold uppercase tracking-[0.14em] md:flex">
-                {SUPPORTED_LOCALES.map((l) => (
+                {locales.map((l) => (
                   <button
-                    key={l}
+                    key={l.code}
                     type="button"
-                    onClick={() => switchLocale(l)}
-                    aria-current={l === locale}
-                    className={cn("px-1 transition", l === locale ? "text-ink underline decoration-oxide underline-offset-4" : "text-muted hover:text-ink")}
+                    lang={l.code}
+                    onClick={() => switchLocale(l.code)}
+                    aria-current={l.code === locale}
+                    className={cn("px-1 transition", l.code === locale ? "text-ink underline decoration-oxide underline-offset-4" : "text-muted hover:text-ink")}
                   >
-                    {localeMeta[l]?.nativeName ?? l}
+                    {l.nativeName}
                   </button>
                 ))}
               </div>
@@ -289,21 +291,22 @@ export function SiteHeader({ categories, collections }: { categories: NavCategor
         )}
 
         <div className="mt-10 flex flex-col gap-5 border-t border-line pt-6">
-          {features.languageSwitcher && (
+          {features.languageSwitcher && locales.length > 1 && (
             <div>
               <p className="eyebrow mb-2">{t("common.language")}</p>
-              <div className="flex gap-2">
-                {SUPPORTED_LOCALES.map((l) => (
+              <div className="flex flex-wrap gap-2">
+                {locales.map((l) => (
                   <button
-                    key={l}
+                    key={l.code}
                     type="button"
+                    lang={l.code}
                     onClick={() => {
                       setMobile(false);
-                      switchLocale(l);
+                      switchLocale(l.code);
                     }}
-                    className={cn("border px-3 py-1.5 text-xs", l === locale ? "border-ink bg-ink text-paper" : "border-line text-muted")}
+                    className={cn("border px-3 py-1.5 text-xs", l.code === locale ? "border-ink bg-ink text-paper" : "border-line text-muted")}
                   >
-                    {localeMeta[l]?.nativeName ?? l}
+                    {l.nativeName}
                   </button>
                 ))}
               </div>

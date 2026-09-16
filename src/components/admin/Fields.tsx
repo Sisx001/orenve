@@ -1,10 +1,13 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { minorToMajor } from "@/lib/money";
+import { useStudioLocales } from "@/components/admin/StudioLocales";
+import { type AiWriteConfig, useAiWrite } from "@/components/admin/AiWrite";
 
 /* ───────────────────────────── Field shell ───────────────────────────── */
 
@@ -239,14 +242,21 @@ export function MoneyInput({
 /* ───────────────────────────── i18n pair ───────────────────────────── */
 
 /**
- * English + Bangla pair. Posts `<name>_en` and `<name>_bn`, read back by
+ * Bilingual (or multi-lingual) text input. Posts `<name>_<code>` for every
+ * registered studio locale (e.g. `name_en`, `name_bn`), read server-side by
  * `readI18n(formData, name)`.
+ *
+ * Props:
+ *  - `values`  – preferred way: `{ en: "…", bn: "…", … }`
+ *  - `en`, `bn` – kept for backwards compat; merged into `values`
+ *  - `ai`      – when provided, renders compact AI-write buttons
  */
 export function I18nInput({
   name,
   label,
   hint,
   error,
+  values,
   en,
   bn,
   multiline,
@@ -255,12 +265,17 @@ export function I18nInput({
   placeholder,
   className,
   layout = "tabs",
+  ai,
 }: {
   name: string;
   label?: ReactNode;
   hint?: ReactNode;
   error?: ReactNode;
+  /** Preferred: record of locale code → initial value. */
+  values?: Record<string, string>;
+  /** Compat: English initial value. */
   en?: string;
+  /** Compat: Bangla initial value. */
   bn?: string;
   multiline?: boolean;
   rows?: number;
@@ -268,63 +283,259 @@ export function I18nInput({
   placeholder?: string;
   className?: string;
   layout?: "tabs" | "stack";
+  /** When provided, shows AI write buttons. */
+  ai?: AiWriteConfig;
 }) {
-  const [tab, setTab] = useState<"en" | "bn">("en");
+  const locales = useStudioLocales();
+  const { write } = useAiWrite();
+
+  /* Initialise controlled state once from props */
+  const [vals, setVals] = useState<Record<string, string>>(() => {
+    const base: Record<string, string> = {};
+    for (const loc of locales) {
+      base[loc.code] =
+        values?.[loc.code] ??
+        (loc.code === "en" ? (en ?? "") : loc.code === "bn" ? (bn ?? "") : "");
+    }
+    return base;
+  });
+  const [tab, setTab] = useState<string>(locales[0]?.code ?? "en");
+  const [aiLocale, setAiLocale] = useState<string | null>(null);
+
   const inputCls = "field-box";
 
-  const field = (locale: "en" | "bn", hidden: boolean) => {
-    const common = {
-      name: `${name}_${locale}`,
-      defaultValue: locale === "en" ? (en ?? "") : (bn ?? ""),
-      placeholder: placeholder,
-      required: required && locale === "en",
-      lang: locale,
-      className: cn(inputCls, error && "border-danger", locale === "bn" && "font-bangla"),
+  /* ── helpers ── */
+
+  function setVal(code: string, v: string) {
+    setVals((prev) => ({ ...prev, [code]: v }));
+  }
+
+  const localeMap = useMemo(
+    () => Object.fromEntries(locales.map((l) => [l.code, l])),
+    [locales],
+  );
+
+  async function runAi(
+    mode: "write" | "improve" | "translate",
+    localeCode: string,
+  ) {
+    if (!ai) return;
+    setAiLocale(localeCode);
+    try {
+      const result = await write({
+        task: ai.task,
+        locale: localeCode,
+        context: ai.context,
+        mode,
+        text: mode === "improve" ? (vals[localeCode] ?? "") : undefined,
+        sourceText: mode === "translate" ? (vals["en"] ?? "") : undefined,
+        maxWords: ai.maxWords,
+      });
+      setVal(localeCode, result);
+      toast.success("AI copy ready");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "AI write failed";
+      if (msg === "ai.offline" || msg.includes("ai.offline")) {
+        toast.info("AI not configured");
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setAiLocale(null);
+    }
+  }
+
+  async function runAllLanguages() {
+    if (!ai) return;
+    const enText = vals["en"] ?? "";
+    const targets = locales.filter((l) => l.code !== "en" && !(vals[l.code] ?? "").trim());
+    for (const loc of targets) {
+      setAiLocale(loc.code);
+      try {
+        const result = await write({
+          task: ai.task,
+          locale: loc.code,
+          context: ai.context,
+          mode: "translate",
+          sourceText: enText,
+          maxWords: ai.maxWords,
+        });
+        setVals((prev) => ({ ...prev, [loc.code]: result }));
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "AI write failed";
+        if (msg === "ai.offline" || msg.includes("ai.offline")) {
+          toast.info("AI not configured");
+          break;
+        } else {
+          toast.error(`${loc.code}: ${msg}`);
+        }
+      }
+    }
+    setAiLocale(null);
+    if (targets.length > 0) toast.success("All languages filled");
+  }
+
+  /* ── AI button row (tabs layout) ── */
+  function AiRow({ localeCode }: { localeCode: string }) {
+    if (!ai) return null;
+    const isBusy = aiLocale !== null;
+    const thisBusy = aiLocale === localeCode;
+    return (
+      <div className="mb-1.5 flex flex-wrap items-center gap-1">
+        <AiBtn
+          label="Write"
+          busy={thisBusy}
+          disabled={isBusy}
+          onClick={() => runAi("write", localeCode)}
+        />
+        <AiBtn
+          label="Improve"
+          busy={false}
+          disabled={isBusy || !(vals[localeCode] ?? "").trim()}
+          onClick={() => runAi("improve", localeCode)}
+        />
+        {localeCode !== "en" && (
+          <AiBtn
+            label="Translate from English"
+            busy={thisBusy}
+            disabled={isBusy || !(vals["en"] ?? "").trim()}
+            onClick={() => runAi("translate", localeCode)}
+          />
+        )}
+        {localeCode === "en" && locales.length > 1 && (
+          <AiBtn
+            label="All languages"
+            busy={aiLocale !== null && aiLocale !== "en"}
+            disabled={isBusy || !(vals["en"] ?? "").trim()}
+            onClick={runAllLanguages}
+          />
+        )}
+      </div>
+    );
+  }
+
+  /* ── single field renderer ── */
+  function renderField(localeCode: string, hidden: boolean) {
+    const loc = localeMap[localeCode];
+    const isBn = localeCode === "bn";
+    const isRtl = loc?.dir === "rtl";
+    const fontFam = loc?.font ?? undefined;
+    const commonCls = cn(
+      inputCls,
+      error && "border-danger",
+      isBn && "font-bangla",
+    );
+    const commonProps = {
+      name: `${name}_${localeCode}`,
+      value: vals[localeCode] ?? "",
+      onChange: (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+      ) => setVal(localeCode, e.target.value),
+      placeholder,
+      required: required && localeCode === "en",
+      lang: localeCode,
+      dir: isRtl ? ("rtl" as const) : undefined,
+      style: fontFam ? { fontFamily: fontFam } : undefined,
+      className: commonCls,
     };
     return (
       <div className={cn(hidden && "hidden")}>
-        {multiline ? <textarea {...common} rows={rows} className={cn(common.className, "min-h-[110px] resize-y")} /> : <input type="text" {...common} />}
+        {multiline ? (
+          <textarea
+            {...commonProps}
+            rows={rows}
+            className={cn(commonCls, "min-h-[110px] resize-y")}
+          />
+        ) : (
+          <input type="text" {...commonProps} />
+        )}
       </div>
     );
-  };
+  }
 
+  /* ── stack layout ── */
   if (layout === "stack") {
+    const cols = locales.length === 1 ? 1 : 2;
     return (
       <Field label={label} hint={hint} error={error} required={required} className={className}>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <span className="mb-1 block text-[0.58rem] uppercase tracking-[0.14em] text-muted">English</span>
-            {field("en", false)}
+        {ai && (
+          <div className="mb-2 flex flex-wrap items-center gap-1">
+            <AiBtn
+              label="All languages"
+              busy={aiLocale !== null}
+              disabled={aiLocale !== null || !(vals["en"] ?? "").trim()}
+              onClick={runAllLanguages}
+            />
           </div>
-          <div>
-            <span className="mb-1 block text-[0.58rem] uppercase tracking-[0.14em] text-muted">বাংলা</span>
-            {field("bn", false)}
-          </div>
+        )}
+        <div className={cn("grid gap-2", cols === 2 && "sm:grid-cols-2")}>
+          {locales.map((loc) => (
+            <div key={loc.code}>
+              <span className="mb-1 block text-[0.58rem] uppercase tracking-[0.14em] text-muted">
+                {loc.nativeName}
+              </span>
+              {ai && <AiRow localeCode={loc.code} />}
+              {renderField(loc.code, false)}
+            </div>
+          ))}
         </div>
       </Field>
     );
   }
 
+  /* ── tabs layout (default) ── */
   return (
     <Field label={label} hint={hint} error={error} required={required} className={className}>
-      <div className="mb-1.5 flex gap-1">
-        {(["en", "bn"] as const).map((l) => (
+      <div className="mb-1.5 flex flex-wrap gap-1">
+        {locales.map((loc) => (
           <button
-            key={l}
+            key={loc.code}
             type="button"
-            onClick={() => setTab(l)}
+            onClick={() => setTab(loc.code)}
             className={cn(
               "border px-2 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em] transition",
-              tab === l ? "border-ink bg-ink text-paper" : "border-line text-muted hover:border-ink hover:text-ink",
+              tab === loc.code
+                ? "border-ink bg-ink text-paper"
+                : "border-line text-muted hover:border-ink hover:text-ink",
             )}
           >
-            {l === "en" ? "English" : "বাংলা"}
+            {loc.nativeName}
           </button>
         ))}
       </div>
-      {field("en", tab !== "en")}
-      {field("bn", tab !== "bn")}
+      {ai && <AiRow localeCode={tab} />}
+      {locales.map((loc) => renderField(loc.code, tab !== loc.code))}
     </Field>
+  );
+}
+
+/* ── tiny internal AI button ── */
+
+function AiBtn({
+  label,
+  busy,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  busy: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || busy}
+      className="inline-flex items-center gap-1 border border-line px-2 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-muted transition hover:border-oxide hover:text-oxide disabled:opacity-40"
+    >
+      {busy ? (
+        <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+      ) : (
+        <Sparkles className="h-3 w-3" aria-hidden />
+      )}
+      {label}
+    </button>
   );
 }
 

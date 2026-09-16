@@ -3,6 +3,7 @@ import { cache } from "react";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { parseJson, toJson } from "@/lib/json";
+import { getEnabledLocales } from "@/lib/i18n/registry";
 
 /**
  * Typed settings stored as JSON rows in `Setting`. Every group has a Zod schema
@@ -172,6 +173,41 @@ export const aiSchema = z.object({
   rateLimitPerHour: z.number().int().default(60),
   logConversations: z.boolean().default(true),
   handoffWhatsapp: z.boolean().default(true),
+  // ── Phase 4 upgrades ──
+  streaming: z.boolean().default(true), // stream the final reply token by token
+  showProductCards: z.boolean().default(true), // render product / order cards in the widget
+  allowChangeRequests: z.boolean().default(true), // customers may ask to cancel / change address after verifying an order
+  sizeAdvisor: z
+    .object({
+      enabled: z.boolean().default(true),
+      // Brand-level fit table used when a product has no size guide. Chest in cm, height/weight ranges.
+      chart: z
+        .string()
+        .default(
+          JSON.stringify([
+            { size: "S", chest: [88, 94], height: [160, 172], weight: [52, 64] },
+            { size: "M", chest: [94, 100], height: [168, 178], weight: [62, 74] },
+            { size: "L", chest: [100, 106], height: [174, 184], weight: [72, 86] },
+            { size: "XL", chest: [106, 114], height: [180, 190], weight: [84, 98] },
+          ]),
+        ),
+      note: z.record(z.string()).default({ en: "Between sizes? Size up for a relaxed fit, down for a closer fit.", bn: "দুই সাইজের মাঝে? রিল্যাক্সড ফিটের জন্য বড়, ক্লোজ ফিটের জন্য ছোট সাইজ নিন।" }),
+    })
+    .default({}),
+  brandVoice: z
+    .string()
+    .default("Quiet confidence. Precise, warm, unhurried. Short sentences. No hype words, no exclamation marks, no emojis. British spelling in English; natural, modern Bangla — never a word-for-word transliteration."),
+  writerEnabled: z.boolean().default(true),
+  writerTemperature: z.number().min(0).max(1.5).default(0.7),
+});
+
+/** Multi-language engine (Phase 4). Built-in en/bn live in messages/*.json; extra languages live in the Language table. */
+export const i18nSchema = z.object({
+  glossary: z.array(z.string()).default(["ORYNVE", "bKash", "Nagad", "WhatsApp", "Messenger", "COD"]), // never translated
+  autoTranslateNewContent: z.boolean().default(false), // translate new products/pages into every enabled language on save
+  showMachineBadge: z.boolean().default(false), // small "machine translated" note in the footer for unreviewed languages
+  contentModels: z.array(z.string()).default(["product", "category", "collection", "page", "block", "setting"]),
+  batchSize: z.number().int().min(5).max(80).default(35), // dictionary keys per AI call
 });
 
 export const courierSchema = z.object({
@@ -206,6 +242,7 @@ export const SETTING_SCHEMAS = {
   seo: seoSchema,
   site: siteSchema,
   ai: aiSchema,
+  i18n: i18nSchema,
 } as const;
 
 export type SettingKey = keyof typeof SETTING_SCHEMAS;
@@ -232,7 +269,7 @@ export async function saveSetting<K extends SettingKey>(key: K, value: unknown):
 
 /** Public-safe subset shipped to the client (never includes secrets like AI keys). */
 export async function getPublicConfig() {
-  const [brand, contact, features, checkout, currency, locale, seo, site, ai] = await Promise.all([
+  const [brand, contact, features, checkout, currency, locale, seo, site, ai, i18n, locales] = await Promise.all([
     getSetting("brand"),
     getSetting("contact"),
     getSetting("features"),
@@ -242,10 +279,26 @@ export async function getPublicConfig() {
     getSetting("seo"),
     getSetting("site"),
     getSetting("ai"),
+    getSetting("i18n"),
+    getEnabledLocales(),
   ]);
-  const { apiKey: _k, baseUrl: _b, model: _m, extraInstructions: _e, ...aiPublic } = ai;
+  const { apiKey: _k, baseUrl: _b, model: _m, extraInstructions: _e, brandVoice: _v, ...aiPublic } = ai;
   const { gateways: _g, ...checkoutPublic } = checkout; // gateway credentials never leave the server
   const geo = await getSetting("geo");
-  return { brand, contact, features, checkout: checkoutPublic, currency, locale, seo, site, ai: aiPublic, geo };
+  return {
+    brand,
+    contact,
+    features,
+    checkout: checkoutPublic,
+    currency,
+    locale,
+    seo,
+    site,
+    ai: aiPublic,
+    geo,
+    /** Every language reachable on the storefront, built-ins first. */
+    locales,
+    i18n: { showMachineBadge: i18n.showMachineBadge },
+  };
 }
 export type PublicConfig = Awaited<ReturnType<typeof getPublicConfig>>;

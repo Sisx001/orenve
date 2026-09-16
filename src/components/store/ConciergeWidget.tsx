@@ -6,26 +6,58 @@ import { AnimatePresence, motion } from "framer-motion";
 import { MessageCircle, RotateCcw, Send, X, ExternalLink } from "lucide-react";
 import { useT, useLocale } from "@/lib/i18n/client";
 import { useConfig } from "@/components/providers/ConfigProvider";
-import { apiFetch } from "@/lib/store/api";
 import { i18nText } from "@/lib/json";
 import { DUR, EASE } from "@/lib/store/motion";
 import { cn } from "@/lib/utils";
+import { readCsrfCookie } from "@/lib/store/api";
 
-type Msg = { id: string; role: "user" | "assistant"; text: string; handoffUrl?: string | null; error?: boolean };
+type SizeEntry = { size: string; stock: number };
+
+type ProductCard = {
+  kind: "product";
+  name: string;
+  price: string;
+  compareAt: string | null;
+  image: string | null;
+  page: string;
+  sizes: SizeEntry[];
+};
+
+type OrderCard = {
+  kind: "order";
+  number: string;
+  status: string;
+  trackPage: string;
+  courier?: string | null;
+  trackingCode?: string | null;
+};
+
+type AiCard = ProductCard | OrderCard;
+
+type Msg = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  streaming?: boolean;
+  handoffUrl?: string | null;
+  error?: boolean;
+  cards?: AiCard[];
+  requestCreated?: boolean;
+};
 
 const OPEN_KEY = "orynve.concierge.open";
 const MSG_KEY = "orynve.concierge.messages";
 export const CONCIERGE_EVENT = "orynve:concierge";
 
-/** Renders assistant text: line breaks preserved, same-origin paths linkified. */
+/** Renders assistant text: line breaks preserved, same-origin paths linkified (any 2–3 letter locale). */
 function AssistantText({ text }: { text: string }) {
   const nodes: ReactNode[] = [];
   text.split("\n").forEach((line, li) => {
     if (li > 0) nodes.push(<br key={`br-${li}`} />);
-    const parts = line.split(/(\/(?:en|bn)\/[A-Za-z0-9\-_/]+)/g);
+    const parts = line.split(/(\/[a-zA-Z]{2,3}\/[A-Za-z0-9\-_/]+)/g);
     parts.forEach((part, pi) => {
       if (!part) return;
-      if (/^\/(en|bn)\/[A-Za-z0-9\-_/]+$/.test(part)) {
+      if (/^\/[a-zA-Z]{2,3}\/[A-Za-z0-9\-_/]+$/.test(part)) {
         nodes.push(
           <Link key={`l-${li}-${pi}`} href={part} className="underline decoration-oxide underline-offset-4 hover:text-oxide">
             {part}
@@ -39,6 +71,72 @@ function AssistantText({ text }: { text: string }) {
   return <>{nodes}</>;
 }
 
+function ProductCardView({ card, t }: { card: ProductCard; t: (key: string) => string }) {
+  const inStock = card.sizes.filter((s) => s.stock > 0);
+  const soldOut = card.sizes.filter((s) => s.stock === 0);
+  return (
+    <div className="mt-2 border border-line bg-bone/30 first:mt-0">
+      <div className="flex gap-3 p-2.5">
+        {card.image && (
+          <div className="h-14 w-10 shrink-0 overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={card.image} alt={card.name} className="h-full w-full object-cover" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[0.7rem] font-semibold leading-tight">{card.name}</p>
+          <p className="mt-0.5 flex items-baseline gap-1.5 text-xs">
+            <span>{card.price}</span>
+            {card.compareAt && <span className="text-muted line-through">{card.compareAt}</span>}
+          </p>
+          {card.sizes.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {inStock.map((s) => (
+                <span key={s.size} className="border border-ink/30 bg-bone px-1 py-px text-[0.55rem] font-medium uppercase tracking-[0.1em]" title={t("ai.cardsInStock")}>
+                  {s.size}
+                </span>
+              ))}
+              {soldOut.map((s) => (
+                <span key={s.size} className="border border-line px-1 py-px text-[0.55rem] uppercase tracking-[0.1em] text-muted line-through" title={t("ai.cardsSoldOut")}>
+                  {s.size}
+                </span>
+              ))}
+            </div>
+          )}
+          <Link href={card.page} className="mt-1.5 inline-block text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-oxide underline-offset-2 hover:underline">
+            {t("ai.viewProduct")}
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OrderCardView({ card, t }: { card: OrderCard; t: (key: string) => string }) {
+  return (
+    <div className="mt-2 border border-line bg-bone/30 p-2.5">
+      <p className="font-mono text-[0.7rem] font-semibold">{card.number}</p>
+      <p className="mt-0.5 text-[0.65rem] capitalize text-muted">{card.status}</p>
+      {card.courier && <p className="mt-0.5 text-[0.6rem] text-muted">{card.courier}</p>}
+      <Link href={card.trackPage} className="mt-1.5 inline-block text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-oxide underline-offset-2 hover:underline">
+        {t("ai.viewOrder")}
+      </Link>
+    </div>
+  );
+}
+
+async function getCsrfHeader(): Promise<string> {
+  const existing = readCsrfCookie();
+  if (existing) return existing;
+  // Mint lazily via the CSRF endpoint (same flow as ensureCsrfToken in store/api.ts)
+  try {
+    await fetch("/api/csrf", { credentials: "same-origin" });
+    return readCsrfCookie();
+  } catch {
+    return "";
+  }
+}
+
 export function ConciergeWidget() {
   const t = useT();
   const locale = useLocale();
@@ -50,10 +148,12 @@ export function ConciergeWidget() {
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const resetNext = useRef(false);
+  const streamingMsgId = useRef<string | null>(null);
 
   const enabled = config.features.aiConcierge && config.ai.enabled;
   const assistantName = i18nText(config.ai.assistantName, locale) || t("ai.title");
   const greeting = i18nText(config.ai.greeting, locale);
+  const showCards = config.ai.showProductCards;
 
   // hydrate from sessionStorage
   useEffect(() => {
@@ -67,19 +167,11 @@ export function ConciergeWidget() {
   }, []);
 
   useEffect(() => {
-    try {
-      sessionStorage.setItem(OPEN_KEY, open ? "1" : "0");
-    } catch {
-      /* ignore */
-    }
+    try { sessionStorage.setItem(OPEN_KEY, open ? "1" : "0"); } catch {}
   }, [open]);
 
   useEffect(() => {
-    try {
-      sessionStorage.setItem(MSG_KEY, JSON.stringify(messages.slice(-40)));
-    } catch {
-      /* ignore */
-    }
+    try { sessionStorage.setItem(MSG_KEY, JSON.stringify(messages.slice(-40))); } catch {}
   }, [messages]);
 
   useEffect(() => {
@@ -96,21 +188,128 @@ export function ConciergeWidget() {
       setMessages((m) => [...m, userMsg]);
       setDraft("");
       setBusy(true);
+
+      const aId = `a${Date.now()}`;
+      streamingMsgId.current = aId;
+
       try {
-        const r = await apiFetch<{ reply: string; handoffUrl: string | null; orderNumber: string | null }>("/api/ai/chat", {
+        const csrf = await getCsrfHeader();
+
+        // Try SSE streaming first
+        const res = await fetch("/api/ai/chat", {
           method: "POST",
-          json: { message: body, locale, reset },
+          headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": csrf,
+            Accept: "text/event-stream",
+          },
+          credentials: "same-origin",
+          body: JSON.stringify({ message: body, locale, reset }),
         });
-        setMessages((m) => [...m, { id: `a${Date.now()}`, role: "assistant", text: r.reply, handoffUrl: r.handoffUrl }]);
+
+        if (res.ok && res.headers.get("content-type")?.includes("text/event-stream") && res.body) {
+          // Add placeholder streaming message
+          setMessages((m) => [...m, { id: aId, role: "assistant", text: "", streaming: true }]);
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let partial = "";
+          let finalReply = "";
+          let finalCards: AiCard[] = [];
+          let finalHandoffUrl: string | null = null;
+          let finalRequestCreated = false;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            partial += decoder.decode(value, { stream: true });
+
+            const lines = partial.split("\n");
+            partial = lines.pop() ?? "";
+
+            let currentEvent = "";
+            for (const line of lines) {
+              if (line.startsWith("event:")) {
+                currentEvent = line.slice(6).trim();
+              } else if (line.startsWith("data:")) {
+                const dataStr = line.slice(5).trim();
+                try {
+                  const data = JSON.parse(dataStr);
+                  if (currentEvent === "delta" && typeof data.text === "string") {
+                    finalReply += data.text;
+                    setMessages((m) =>
+                      m.map((msg) =>
+                        msg.id === aId ? { ...msg, text: finalReply } : msg,
+                      ),
+                    );
+                  } else if (currentEvent === "cards" && Array.isArray(data)) {
+                    finalCards = data as AiCard[];
+                  } else if (currentEvent === "done") {
+                    // Use sanitized final reply from server (may differ from stream)
+                    if (typeof data.reply === "string" && data.reply !== finalReply) {
+                      finalReply = data.reply;
+                    }
+                    finalHandoffUrl = data.handoffUrl ?? null;
+                    finalRequestCreated = Boolean(data.requestCreated);
+                  } else if (currentEvent === "error") {
+                    throw new Error(data.code ?? "ai.error");
+                  }
+                } catch (e) {
+                  if (e instanceof Error && e.message.startsWith("ai.")) throw e;
+                }
+                currentEvent = "";
+              }
+            }
+          }
+
+          // Finalize message
+          setMessages((m) =>
+            m.map((msg) =>
+              msg.id === aId
+                ? {
+                    ...msg,
+                    text: finalReply,
+                    streaming: false,
+                    handoffUrl: finalHandoffUrl,
+                    cards: showCards ? finalCards : [],
+                    requestCreated: finalRequestCreated,
+                  }
+                : msg,
+            ),
+          );
+        } else {
+          // Fallback: parse as JSON
+          const data = await res.json().catch(() => ({ ok: false, error: "ai.error" }));
+          if (!res.ok || !data.ok) throw new Error(data.error ?? "ai.error");
+          setMessages((m) => [
+            ...m,
+            {
+              id: aId,
+              role: "assistant",
+              text: data.reply,
+              handoffUrl: data.handoffUrl,
+              cards: showCards ? (data.cards ?? []) : [],
+              requestCreated: data.requestCreated ?? false,
+            },
+          ]);
+        }
       } catch (e) {
         const err = e as Error & { vars?: Record<string, string | number>; status?: number };
         const key = err.message === "ai.offline" || err.message === "ai.rateLimited" ? err.message : "ai.error";
-        setMessages((m) => [...m, { id: `e${Date.now()}`, role: "assistant", text: t(key, err.vars), error: true }]);
+        setMessages((m) => {
+          // Replace the streaming placeholder if present, else append
+          const hasPlaceholder = m.some((msg) => msg.id === aId);
+          if (hasPlaceholder) {
+            return m.map((msg) => msg.id === aId ? { ...msg, text: t(key, err.vars), streaming: false, error: true } : msg);
+          }
+          return [...m, { id: aId, role: "assistant", text: t(key, err.vars), error: true }];
+        });
       } finally {
         setBusy(false);
+        streamingMsgId.current = null;
       }
     },
-    [busy, locale, t],
+    [busy, locale, t, showCards],
   );
 
   // global opener: window.dispatchEvent(new CustomEvent("orynve:concierge", { detail: { message } }))
@@ -136,7 +335,6 @@ export function ConciergeWidget() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  /** Clears the transcript locally; the next message starts a fresh server session. */
   function newConversation() {
     setMessages([]);
     setDraft("");
@@ -146,7 +344,13 @@ export function ConciergeWidget() {
 
   if (!enabled) return null;
 
-  const suggestions = [t("ai.suggestTrack"), t("ai.suggestSize"), t("ai.suggestDelivery"), t("ai.suggestReturns")];
+  const suggestions = [
+    t("ai.suggestTrack"),
+    t("ai.suggestSize"),
+    t("ai.suggestSizeAdvisor"),
+    t("ai.suggestDelivery"),
+    t("ai.suggestReturns"),
+  ];
 
   return (
     <>
@@ -212,21 +416,46 @@ export function ConciergeWidget() {
                 <Bubble role="assistant">{greeting || t("ai.title")}</Bubble>
                 {messages.map((m) => (
                   <Bubble key={m.id} role={m.role} error={m.error}>
-                    {m.role === "assistant" ? <AssistantText text={m.text} /> : m.text}
-                    {m.handoffUrl && (
-                      <a
-                        href={m.handoffUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center gap-2 border border-ink px-3 py-2 text-[0.62rem] font-semibold uppercase tracking-[0.14em] transition hover:bg-ink hover:text-paper"
-                      >
-                        <ExternalLink className="h-3 w-3" aria-hidden />
-                        {t("ai.handoff")}
-                      </a>
+                    {m.role === "assistant" ? (
+                      <>
+                        <AssistantText text={m.text} />
+                        {m.streaming && (
+                          <span className="ml-0.5 inline-block h-3.5 w-px animate-pulse bg-ink align-middle" aria-hidden />
+                        )}
+                        {m.requestCreated && (
+                          <p className="mt-2 border border-success/40 bg-success/10 px-2 py-1.5 text-[0.62rem] text-success">
+                            {t("ai.requestSent")}
+                          </p>
+                        )}
+                        {showCards && m.cards && m.cards.length > 0 && (
+                          <div className="mt-2 space-y-1.5">
+                            {m.cards.map((card, i) =>
+                              card.kind === "product" ? (
+                                <ProductCardView key={i} card={card} t={t} />
+                              ) : (
+                                <OrderCardView key={i} card={card} t={t} />
+                              ),
+                            )}
+                          </div>
+                        )}
+                        {m.handoffUrl && (
+                          <a
+                            href={m.handoffUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 inline-flex items-center gap-2 border border-ink px-3 py-2 text-[0.62rem] font-semibold uppercase tracking-[0.14em] transition hover:bg-ink hover:text-paper"
+                          >
+                            <ExternalLink className="h-3 w-3" aria-hidden />
+                            {t("ai.handoff")}
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      m.text
                     )}
                   </Bubble>
                 ))}
-                {busy && (
+                {busy && !messages.some((m) => m.streaming) && (
                   <div className="mb-4 flex items-center gap-1.5 text-muted" aria-label={t("ai.thinking")}>
                     {[0, 1, 2].map((i) => (
                       <span key={i} className="h-1.5 w-1.5 animate-pulseDot rounded-full bg-muted" style={{ animationDelay: `${i * 0.18}s` }} />

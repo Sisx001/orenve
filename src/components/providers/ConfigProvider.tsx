@@ -73,3 +73,5 @@ export function useConfig() {
 }
 export const useMoney = () => useConfig().money;
 export const useFeatures = () => useConfig().config.features;
+/** Storefront languages (enabled only) as registered in the studio. */
+export const useLocales = () => useConfig().config.locales;
