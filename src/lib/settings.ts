@@ -15,7 +15,7 @@ export const brandSchema = z.object({
   logoUrl: z.string().nullable().default(null), // custom raster/SVG upload; null = built-in mark
   accent: z.string().default("#b24a24"),
   brass: z.string().default("#c9a25c"),
-  theme: z.enum(["light", "dark", "system"]).default("light"),
+  theme: z.enum(["light", "dark", "black", "system"]).default("light"), // legacy default mode; superseded by the "theme" settings group
   radius: z.number().min(0).max(24).default(2),
   fontDisplay: z.string().default("Fraunces"),
   fontSans: z.string().default("Space Grotesk"),
@@ -201,6 +201,15 @@ export const aiSchema = z.object({
   writerTemperature: z.number().min(0).max(1.5).default(0.7),
 });
 
+/** Theme system (Phase 4). Which theme is live, which colour modes visitors may use. */
+export const themeSchema = z.object({
+  activeThemeId: z.string().nullable().default(null), // null → built-in "orynve" preset driven by brand settings
+  modes: z.object({ light: z.boolean().default(true), dark: z.boolean().default(true), black: z.boolean().default(false) }).default({}),
+  defaultMode: z.enum(["light", "dark", "black", "system"]).default("light"),
+  allowVisitorToggle: z.boolean().default(true),
+  studioTheme: z.enum(["light", "dark", "system"]).default("light"), // studio (admin) appearance default
+});
+
 /** Multi-language engine (Phase 4). Built-in en/bn live in messages/*.json; extra languages live in the Language table. */
 export const i18nSchema = z.object({
   glossary: z.array(z.string()).default(["ORYNVE", "bKash", "Nagad", "WhatsApp", "Messenger", "COD"]), // never translated
@@ -243,6 +252,7 @@ export const SETTING_SCHEMAS = {
   site: siteSchema,
   ai: aiSchema,
   i18n: i18nSchema,
+  theme: themeSchema,
 } as const;
 
 export type SettingKey = keyof typeof SETTING_SCHEMAS;

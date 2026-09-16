@@ -5,6 +5,7 @@ export type Role = (typeof ROLES)[number];
 export const PERMISSIONS: Record<string, Role[]> = {
   "settings.write": ["owner", "admin"],
   "i18n.write": ["owner", "admin", "editor"],
+  "themes.write": ["owner", "admin"],
   "ai.write": ["owner", "admin", "editor"],
   "users.manage": ["owner"],
   "products.write": ["owner", "admin", "editor"],
@@ -79,6 +80,9 @@ export const BD_DISTRICTS = [
 export const COOKIE_SESSION = "ory_session";
 export const COOKIE_CSRF = "ory_csrf";
 export const COOKIE_LOCALE = "ory_locale";
+export const THEME_MODES = ["light", "dark", "black"] as const;
+export type ThemeMode = (typeof THEME_MODES)[number];
+export const COOKIE_STUDIO_THEME = "ory_studio_theme";
 export const COOKIE_THEME = "ory_theme";
 export const COOKIE_CURRENCY = "ory_currency";
 export const COOKIE_AI_SESSION = "ory_ai";

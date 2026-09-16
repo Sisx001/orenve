@@ -98,6 +98,12 @@ export async function getDashboardStats() {
     series.push({ date: key, revenue: b.revenue, orders: b.orders });
   }
 
+  // Extra counts for the dashboard KPI row
+  const [openConciergeCount, newMessagesCount] = await Promise.all([
+    db.conciergeRequest.count({ where: { status: "open" } }),
+    db.contactMessage.count({ where: { status: "new" } }),
+  ]);
+
   return {
     revenue30: revenueAgg._sum.total ?? 0,
     orders30: revenueAgg._count._all ?? 0,
@@ -108,6 +114,8 @@ export async function getDashboardStats() {
     lowStockCount,
     aiConvos7: aiConvos,
     aiFlagged,
+    openConciergeCount,
+    newMessagesCount,
     recentOrders,
     series,
     lowStock: lowStock.map((v) => ({
@@ -172,6 +180,27 @@ export async function getSetupChecklist(): Promise<ChecklistItem[]> {
       hint: "The storefront needs a published product with imagery before launch.",
     },
   ];
+}
+
+// ─────────────────────── Shell counts ───────────────────────
+
+export type ShellCounts = {
+  pendingOrders: number;
+  openConcierge: number;
+  newMessages: number;
+};
+
+/**
+ * Cheap (3 COUNT queries) badge counts for the sidebar navigation.
+ * Called from the admin layout server component.
+ */
+export async function getShellCounts(): Promise<ShellCounts> {
+  const [pendingOrders, openConcierge, newMessages] = await Promise.all([
+    db.order.count({ where: { status: "pending" } }),
+    db.conciergeRequest.count({ where: { status: "open" } }),
+    db.contactMessage.count({ where: { status: "new" } }),
+  ]);
+  return { pendingOrders, openConcierge, newMessages };
 }
 
 /** Status tab counts for the orders list. */
