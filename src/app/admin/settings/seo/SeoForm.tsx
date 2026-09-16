@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 import { SubmitButton, TextField, ToggleRow } from "@/components/admin/Fields";
+import { AiWriteButton } from "@/components/admin/AiWrite";
 import { MediaField } from "@/components/admin/MediaPicker";
 import { Section } from "@/components/admin/PageHeader";
 import { saveSeoAction } from "@/lib/admin/actions/settings";
@@ -25,7 +26,9 @@ export type SeoValues = {
 export function SeoForm({ values, csrf, appUrl }: { values: SeoValues; csrf: string; appUrl: string }) {
   const [state, action] = useActionState(saveSeoAction, idleState);
   const [title, setTitle] = useState(values.titleEn);
+  const [titleBn, setTitleBn] = useState(values.titleBn);
   const [description, setDescription] = useState(values.descriptionEn);
+  const [descriptionBn, setDescriptionBn] = useState(values.descriptionBn);
 
   useEffect(() => {
     if (state.error) toast.error(state.error);
@@ -40,6 +43,11 @@ export function SeoForm({ values, csrf, appUrl }: { values: SeoValues; csrf: str
         <Section title="Search & social">
           <div>
             <span className="mb-1.5 block text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted">Site title</span>
+            <div className="mb-1 flex flex-wrap gap-1">
+              <AiWriteButton task="seo_title" locale="en" mode="write" currentText={title} onResult={setTitle} label="Write (EN)" />
+              <AiWriteButton task="seo_title" locale="en" mode="improve" currentText={title} onResult={setTitle} label="Improve (EN)" />
+              <AiWriteButton task="seo_title" locale="bn" mode="translate" sourceText={title} onResult={setTitleBn} label="Translate → বাংলা" />
+            </div>
             <div className="grid gap-2 sm:grid-cols-2">
               <div>
                 <span className="mb-1 block text-[0.56rem] uppercase tracking-[0.14em] text-muted">English</span>
@@ -47,7 +55,7 @@ export function SeoForm({ values, csrf, appUrl }: { values: SeoValues; csrf: str
               </div>
               <div>
                 <span className="mb-1 block text-[0.56rem] uppercase tracking-[0.14em] text-muted">বাংলা</span>
-                <input name="title_bn" defaultValue={values.titleBn} className="field-box font-bangla" />
+                <input name="title_bn" value={titleBn} onChange={(e) => setTitleBn(e.target.value)} className="field-box font-bangla" />
               </div>
             </div>
             <p className="mt-1 text-xs text-muted">{title.length} characters — around 60 reads best in Google.</p>
@@ -55,6 +63,11 @@ export function SeoForm({ values, csrf, appUrl }: { values: SeoValues; csrf: str
 
           <div className="mt-4">
             <span className="mb-1.5 block text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted">Meta description</span>
+            <div className="mb-1 flex flex-wrap gap-1">
+              <AiWriteButton task="seo_description" locale="en" mode="write" currentText={description} onResult={setDescription} label="Write (EN)" />
+              <AiWriteButton task="seo_description" locale="en" mode="improve" currentText={description} onResult={setDescription} label="Improve (EN)" />
+              <AiWriteButton task="seo_description" locale="bn" mode="translate" sourceText={description} onResult={setDescriptionBn} label="Translate → বাংলা" />
+            </div>
             <div className="grid gap-2 sm:grid-cols-2">
               <div>
                 <span className="mb-1 block text-[0.56rem] uppercase tracking-[0.14em] text-muted">English</span>
@@ -62,7 +75,7 @@ export function SeoForm({ values, csrf, appUrl }: { values: SeoValues; csrf: str
               </div>
               <div>
                 <span className="mb-1 block text-[0.56rem] uppercase tracking-[0.14em] text-muted">বাংলা</span>
-                <textarea name="description_bn" defaultValue={values.descriptionBn} rows={3} className="field-box min-h-[80px] font-bangla" />
+                <textarea name="description_bn" value={descriptionBn} onChange={(e) => setDescriptionBn(e.target.value)} rows={3} className="field-box min-h-[80px] font-bangla" />
               </div>
             </div>
             <p className="mt-1 text-xs text-muted">{description.length} characters — aim for 150–160.</p>

@@ -17,9 +17,13 @@ export type TranslationRow = {
   shipped: string;
   /** per-locale DB override, keyed by locale */
   overrides: Record<string, string>;
+  /** locales whose override is an unreviewed machine translation */
+  machine: Record<string, boolean>;
 };
 
-export function TranslationsTable({ rows, locales, csrf }: { rows: TranslationRow[]; locales: string[]; csrf: string }) {
+export type TranslationLocale = { code: string; label: string };
+
+export function TranslationsTable({ rows, locales, csrf }: { rows: TranslationRow[]; locales: TranslationLocale[]; csrf: string }) {
   const [state, action] = useActionState(saveTranslationsAction, idleState);
   const [q, setQ] = useState("");
   const [onlyOverridden, setOnlyOverridden] = useState(false);
@@ -38,8 +42,8 @@ export function TranslationsTable({ rows, locales, csrf }: { rows: TranslationRo
     const needle = q.trim().toLowerCase();
     return rows.filter((r) => {
       if (needle && !r.key.toLowerCase().includes(needle) && !r.source.toLowerCase().includes(needle) && !r.shipped.toLowerCase().includes(needle)) return false;
-      if (onlyOverridden && !locales.some((l) => r.overrides[l])) return false;
-      if (onlyMissing && locales.every((l) => (l === "bn" ? r.shipped || r.overrides[l] : r.overrides[l]))) return false;
+      if (onlyOverridden && !locales.some((l) => r.overrides[l.code])) return false;
+      if (onlyMissing && locales.every((l) => (l.code === "bn" ? r.shipped || r.overrides[l.code] : r.overrides[l.code]))) return false;
       return true;
     });
   }, [rows, q, onlyOverridden, onlyMissing, locales]);
@@ -89,8 +93,8 @@ export function TranslationsTable({ rows, locales, csrf }: { rows: TranslationRo
                 <th className="w-[18rem] border-b border-line px-3 py-2.5 text-left font-semibold">Key</th>
                 <th className="border-b border-line px-3 py-2.5 text-left font-semibold">English (source)</th>
                 {locales.map((l) => (
-                  <th key={l} className="border-b border-line px-3 py-2.5 text-left font-semibold">
-                    {l === "bn" ? "বাংলা override" : `${l} override`}
+                  <th key={l.code} className="border-b border-line px-3 py-2.5 text-left font-semibold">
+                    <span lang={l.code}>{l.label}</span> override
                   </th>
                 ))}
                 <th className="w-10 border-b border-line px-3 py-2.5" />
@@ -98,7 +102,7 @@ export function TranslationsTable({ rows, locales, csrf }: { rows: TranslationRo
             </thead>
             <tbody>
               {filtered.map((r) => {
-                const dirty = locales.some((l) => cellKey(l, r.key) in edits);
+                const dirty = locales.some((l) => cellKey(l.code, r.key) in edits);
                 return (
                   <tr key={r.key} className={cn("border-b border-line/60 last:border-0", dirty && "bg-oxide/[0.04]")}>
                     <td className="px-3 py-2 align-top">
@@ -108,15 +112,21 @@ export function TranslationsTable({ rows, locales, csrf }: { rows: TranslationRo
                       <span className="block whitespace-pre-line text-xs">{r.source}</span>
                     </td>
                     {locales.map((l) => (
-                      <td key={l} className="px-3 py-2 align-top">
+                      <td key={l.code} className="px-3 py-2 align-top">
                         <textarea
-                          value={valueFor(r, l)}
-                          onChange={(e) => setEdits((s) => ({ ...s, [cellKey(l, r.key)]: e.target.value }))}
+                          value={valueFor(r, l.code)}
+                          onChange={(e) => setEdits((s) => ({ ...s, [cellKey(l.code, r.key)]: e.target.value }))}
                           rows={1}
-                          placeholder={l === "bn" ? r.shipped || "—" : "—"}
-                          aria-label={`${l} translation for ${r.key}`}
-                          className={cn("field-box min-h-[2.2rem] resize-y py-1.5 text-xs", l === "bn" && "font-bangla")}
+                          lang={l.code}
+                          placeholder={l.code === "bn" ? r.shipped || "—" : "—"}
+                          aria-label={`${l.code} translation for ${r.key}`}
+                          className={cn("field-box min-h-[2.2rem] resize-y py-1.5 text-xs", l.code === "bn" && "font-bangla")}
                         />
+                        {r.machine[l.code] && (
+                          <span className="mt-1 inline-block border border-warning/40 bg-warning/10 px-1.5 py-0.5 text-[0.52rem] font-semibold uppercase tracking-[0.12em] text-warning">
+                            machine
+                          </span>
+                        )}
                       </td>
                     ))}
                     <td className="px-3 py-2 text-right align-top">
@@ -127,7 +137,7 @@ export function TranslationsTable({ rows, locales, csrf }: { rows: TranslationRo
                         onClick={() => {
                           setEdits((s) => {
                             const next = { ...s };
-                            for (const l of locales) next[cellKey(l, r.key)] = "";
+                            for (const l of locales) next[cellKey(l.code, r.key)] = "";
                             return next;
                           });
                         }}

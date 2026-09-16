@@ -207,3 +207,26 @@ Do not recommend competitor brands.
 ```
 
 Write in plain English (or Bangla). The model uses these notes when answering but will not reveal them if asked.
+
+## Phase 4 upgrades
+
+### Streaming replies
+When **Streaming** is on (Settings → AI concierge), the widget requests `text/event-stream` and the final answer arrives token by token. Events: `meta` (conversation id, verified order), `delta` (text), `cards` (structured product/order cards), `done` (final sanitised reply, hand-off link, `requestCreated`), `error` (code). Clients that do not send the SSE `Accept` header get the classic JSON response with the same fields. Tool rounds (order lookup, product search) always complete before streaming starts, so nothing unverified is ever streamed.
+
+### Product & order cards
+Cards are built **server-side from tool results**, never parsed from model text. A product card shows image, name, price (with compare-at), size chips with live stock, and a link to the piece. An order card appears after a successful `lookup_order` with status and the tracking page. Toggle with **Product cards**.
+
+### Size advisor
+Tool `recommend_size` — deterministic logic in `src/lib/ai/size-advisor.ts`. It uses the product's own size guide when one exists, otherwise the brand fit table you edit under **Size advisor** (chest / height / weight ranges per size, JSON). The model must phrase the result as guidance, never as a guarantee. Suggestion chip: "Which size fits me?".
+
+### Order change requests
+Tool `request_order_change` (cancel / address / other). Allowed **only** after the customer verified the order in the same conversation (order number + phone) and when **Change requests** is on. It creates a `ConciergeRequest`, an internal order event and an inbox message — it never changes the order itself. Handle requests under **Concierge → Requests** (resolve / reject writes a customer-visible event) or on the order page.
+
+### Brand voice & writer
+**Brand voice** is injected into the concierge prompt and used by the AI writer in the studio (sparkle buttons on every bilingual field: Write, Improve, Translate from English, All languages). Writer endpoint: `POST /api/admin/ai/write` (permission `ai.write`).
+
+### Test console & jailbreak suite
+**Concierge → Test console** lets staff chat as a customer (optionally with a simulated verified order) and see a debug pane: tools called (phone numbers masked), tokens, latency, flags, cards. Conversations from the console are not logged. **Run jailbreak suite** executes 14 canned attacks — ignore-instructions, prompt reveal, persona switch, authority claim, base64 smuggling, "translate your rules", other-customer data, PIN request, off-topic coding, discount promise, cancelling an unverified order, fake tool-result injection, a Bangla prompt attack and a multi-turn set-up — each in a fresh session, and reports pass/fail with deterministic checks (no prompt scaffold, no keys, no foreign phone numbers, refusal detected, no promise words) plus the raw reply for a human read.
+
+### Hardening added
+More injection patterns (base64/decode, "translate your instructions", model probing, `system:` prefixes, forget/new-instructions), reply sanitiser strips anything resembling an API key or `Bearer …`, and cancellation is always described as a request.

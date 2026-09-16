@@ -5,8 +5,8 @@ import { notFound } from "next/navigation";
 import { getCsrfToken } from "@/lib/auth/csrf";
 import { getPublicConfig } from "@/lib/settings";
 import { getTranslator } from "@/lib/i18n/server";
-import { isSupportedLocale } from "@/lib/i18n";
-import { COOKIE_CURRENCY, COOKIE_THEME, SUPPORTED_LOCALES } from "@/lib/constants";
+import { getEnabledLocales, getLocaleInfo } from "@/lib/i18n/registry";
+import { COOKIE_CURRENCY, COOKIE_LOCALE, COOKIE_THEME } from "@/lib/constants";
 import { listCategories, listCollections, getPages } from "@/lib/catalog";
 import { i18nText } from "@/lib/json";
 import { absoluteUrl } from "@/lib/utils";
@@ -26,7 +26,7 @@ import { MaintenanceGate } from "@/components/store/MaintenancePage";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const config = await getPublicConfig();
+  const [config, enabled] = await Promise.all([getPublicConfig(), getEnabledLocales()]);
   const seo = config.seo;
   const title = i18nText(seo.title, locale);
   const description = i18nText(seo.description, locale);
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     applicationName: brand,
     alternates: {
       canonical: `/${locale}`,
-      languages: Object.fromEntries(SUPPORTED_LOCALES.map((l) => [l, `/${l}`])),
+      languages: Object.fromEntries(enabled.map((l) => [l.code, `/${l.code}`])),
     },
     openGraph: {
       type: "website",
@@ -67,7 +67,12 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function LocaleLayout({ children, params }: { children: ReactNode; params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  if (!isSupportedLocale(locale)) notFound();
+
+  // The registry decides which languages exist. Unknown or switched-off
+  // languages are not reachable — the storefront 404s instead of falling back,
+  // so a disabled language never leaks through a stale link.
+  const localeInfo = await getLocaleInfo(locale);
+  if (!localeInfo || !localeInfo.enabled) notFound();
 
   // Mint the double-submit CSRF cookie up front when the runtime allows it.
   // Next 15 rejects cookie writes during a Server Component render, in which
@@ -87,6 +92,16 @@ export default async function LocaleLayout({ children, params }: { children: Rea
     getPages(locale),
   ]);
 
+  // Remember the choice for requests that arrive without a prefix. Only known
+  // languages get here, so the middleware can trust the cookie.
+  if (jar.get(COOKIE_LOCALE)?.value !== locale) {
+    try {
+      jar.set(COOKIE_LOCALE, locale, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+    } catch {
+      /* Next 15 forbids cookie writes during render — the middleware sets it too */
+    }
+  }
+
   const cookieTheme = jar.get(COOKIE_THEME)?.value;
   const brandTheme = config.brand.theme === "system" ? "light" : config.brand.theme;
   const theme: "light" | "dark" = cookieTheme === "dark" || cookieTheme === "light" ? cookieTheme : brandTheme;
@@ -95,7 +110,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const aiOn = config.features.aiConcierge && config.ai.enabled;
 
   return (
-    <html lang={locale} data-theme={theme} suppressHydrationWarning>
+    <html lang={locale} dir={localeInfo.dir} data-theme={theme} suppressHydrationWarning>
       <head>
         <ThemeStyle
           accent={config.brand.accent}
@@ -104,6 +119,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
           fontDisplay={config.brand.fontDisplay}
           fontSans={config.brand.fontSans}
           fontBangla={config.brand.fontBangla}
+          languages={config.locales.map((l) => ({ code: l.code, font: l.font, dir: l.dir }))}
         />
         <meta name="theme-color" content={theme === "dark" ? "#0e0f0c" : "#faf8f3"} />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />

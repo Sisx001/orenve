@@ -6,7 +6,8 @@ import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
-import { Field, FormBanner, I18nInput, SelectField, SubmitButton, TextAreaField, ToggleRow } from "@/components/admin/Fields";
+import { Field, FormBanner, I18nInput, SelectField, SubmitButton, ToggleRow } from "@/components/admin/Fields";
+import type { AiWriteConfig } from "@/components/admin/AiWrite";
 import { savePageAction } from "@/lib/admin/actions/content";
 import { idleState } from "@/lib/admin/action-state";
 import { MARKDOWN_HELP } from "@/lib/admin/constants";
@@ -76,14 +77,50 @@ export function PageEditor({ data, csrf }: { data: PageData; csrf: string }) {
         <div className="card p-4 sm:p-5">
           <h3 className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em]">Body</h3>
           <p className="mb-4 text-xs text-muted">{MARKDOWN_HELP}</p>
-          <TextAreaField name="body_en" label="English" defaultValue={data.bodyEn} inputClassName="min-h-[320px] font-mono text-xs leading-relaxed" required />
-          <TextAreaField name="body_bn" label="বাংলা" defaultValue={data.bodyBn} className="mt-4" inputClassName="min-h-[320px] font-mono text-xs leading-relaxed font-bangla" />
+          <I18nInput
+            name="body"
+            values={{ en: data.bodyEn, bn: data.bodyBn }}
+            multiline
+            rows={16}
+            required
+            ai={
+              {
+                task: "page",
+                context: { title: data.titleEn, slug: data.slug },
+              } satisfies AiWriteConfig
+            }
+          />
         </div>
 
         <div className="card p-4 sm:p-5">
           <h3 className="mb-4 text-[0.68rem] font-semibold uppercase tracking-[0.16em]">SEO</h3>
-          <I18nInput name="seoTitle" label="SEO title" en={data.seoTitleEn} bn={data.seoTitleBn} layout="stack" />
-          <I18nInput name="seoDescription" label="Meta description" en={data.seoDescriptionEn} bn={data.seoDescriptionBn} multiline rows={3} layout="stack" className="mt-4" />
+          <I18nInput
+            name="seoTitle"
+            label="SEO title"
+            values={{ en: data.seoTitleEn, bn: data.seoTitleBn }}
+            layout="stack"
+            ai={
+              {
+                task: "seo_title",
+                context: { title: data.titleEn },
+              } satisfies AiWriteConfig
+            }
+          />
+          <I18nInput
+            name="seoDescription"
+            label="Meta description"
+            values={{ en: data.seoDescriptionEn, bn: data.seoDescriptionBn }}
+            multiline
+            rows={3}
+            layout="stack"
+            className="mt-4"
+            ai={
+              {
+                task: "seo_description",
+                context: { title: data.titleEn },
+              } satisfies AiWriteConfig
+            }
+          />
         </div>
       </div>
 

@@ -42,6 +42,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       events: { orderBy: { createdAt: "desc" }, include: { createdBy: { select: { name: true } } } },
       customer: { select: { id: true, name: true, phone: true, _count: { select: { orders: true } } } },
       shipments: { orderBy: { createdAt: "desc" } },
+      conciergeRequests: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!order) notFound();
@@ -212,6 +213,40 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <Section title="Internal notes">
             <InternalNotes orderId={order.id} csrf={csrf} value={order.internalNotes ?? ""} />
           </Section>
+
+          {order.conciergeRequests.length > 0 && (
+            <Section
+              title="Concierge requests"
+              description="Change requests submitted by the customer through the AI concierge."
+            >
+              <ul className="space-y-2">
+                {order.conciergeRequests.map((r) => (
+                  <li key={r.id} className="border border-line p-3 text-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium capitalize">{r.type.replace("_", " ")}</p>
+                        <p className="mt-0.5 text-xs text-muted">{r.details.slice(0, 200)}</p>
+                        <p className="mt-1 text-[0.6rem] uppercase tracking-[0.12em] text-muted">
+                          {r.createdAt.toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                      <span
+                        className={`shrink-0 border px-2 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.12em] ${
+                          r.status === "open"
+                            ? "border-warning/40 bg-warning/10 text-warning"
+                            : r.status === "resolved"
+                              ? "border-success/40 bg-success/10 text-success"
+                              : "border-muted/40 bg-muted/10 text-muted"
+                        }`}
+                      >
+                        {r.status}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
 
           <Section title="Summary">
             <dl className="space-y-1.5 text-sm">

@@ -56,7 +56,9 @@
     "backHome": "Back to ORYNVE",
     "scroll": "Scroll to explore",
     "enter": "Enter ORYNVE",
-    "skipIntro": "Skip"
+    "skipIntro": "Skip",
+    "machineTranslated": "This language was translated automatically and is being reviewed. Spotted a mistake? Tell us.",
+    "languages": "Languages"
   },
   "nav": {
     "shop": "Shop",
@@ -400,7 +402,15 @@
     "disclaimer": "AI assistant. It can only see public product information and orders you verify with your phone number.",
     "newChat": "New conversation",
     "rateLimited": "You're sending messages quickly. Please wait a moment.",
-    "error": "I couldn't answer that right now. Please try again."
+    "error": "I couldn't answer that right now. Please try again.",
+    "viewProduct": "View piece",
+    "viewOrder": "Open order",
+    "suggestSizeAdvisor": "Which size fits me?",
+    "requestSent": "Request sent to our team — we will confirm shortly.",
+    "streamingLabel": "Typing…",
+    "cardsSizes": "Sizes",
+    "cardsInStock": "in stock",
+    "cardsSoldOut": "sold out"
   },
   "auth": {
     "signIn": "Sign in",

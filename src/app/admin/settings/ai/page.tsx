@@ -39,6 +39,16 @@ export default async function AiSettingsPage() {
           rateLimitPerHour: ai.rateLimitPerHour,
           logConversations: ai.logConversations,
           handoffWhatsapp: ai.handoffWhatsapp,
+          streaming: ai.streaming,
+          showProductCards: ai.showProductCards,
+          allowChangeRequests: ai.allowChangeRequests,
+          sizeAdvisorEnabled: ai.sizeAdvisor.enabled,
+          sizeAdvisorChart: ai.sizeAdvisor.chart,
+          sizeAdvisorNoteEn: ai.sizeAdvisor.note.en ?? "",
+          sizeAdvisorNoteBn: ai.sizeAdvisor.note.bn ?? "",
+          brandVoice: ai.brandVoice,
+          writerEnabled: ai.writerEnabled,
+          writerTemperature: ai.writerTemperature,
         }}
       />
     </div>

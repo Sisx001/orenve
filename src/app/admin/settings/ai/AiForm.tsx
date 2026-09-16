@@ -33,6 +33,16 @@ export type AiValues = {
   rateLimitPerHour: number;
   logConversations: boolean;
   handoffWhatsapp: boolean;
+  streaming: boolean;
+  showProductCards: boolean;
+  allowChangeRequests: boolean;
+  sizeAdvisorEnabled: boolean;
+  sizeAdvisorChart: string;
+  sizeAdvisorNoteEn: string;
+  sizeAdvisorNoteBn: string;
+  brandVoice: string;
+  writerEnabled: boolean;
+  writerTemperature: number;
 };
 
 type TestResult = { ok: boolean; message: string; latencyMs: number; model: string; usingEnvKey: boolean };
@@ -220,9 +230,53 @@ export function AiForm({ values, csrf }: { values: AiValues; csrf: string }) {
               hint="Strongly recommended — order number alone is not proof of identity."
               defaultChecked={values.requirePhoneForOrder}
             />
-            <ToggleRow name="handoffWhatsapp" label="Offer WhatsApp hand-off" hint="Shows a “talk to a human” link when it cannot help." defaultChecked={values.handoffWhatsapp} />
+            <ToggleRow name="handoffWhatsapp" label="Offer WhatsApp hand-off" hint={"Shows a “talk to a human” link when it cannot help."} defaultChecked={values.handoffWhatsapp} />
             <ToggleRow name="logConversations" label="Log conversations" hint="Needed for the Concierge review screen." defaultChecked={values.logConversations} />
+            <ToggleRow name="streaming" label="Stream replies" hint="Deliver the response token by token in the widget for a live feel." defaultChecked={values.streaming} />
+            <ToggleRow name="showProductCards" label="Show product cards" hint="Render image, price and size-chip cards alongside product search results." defaultChecked={values.showProductCards} />
+            <ToggleRow name="allowChangeRequests" label="Allow change requests" hint="Let verified customers request order cancellations or address changes via the concierge." defaultChecked={values.allowChangeRequests} />
           </div>
+        </Section>
+
+        <Section title="Size advisor">
+          <div className="divide-y divide-line/70">
+            <ToggleRow name="sizeAdvisorEnabled" label="Enable size advisor" hint="Adds the recommend_size tool so customers can get guided sizing." defaultChecked={values.sizeAdvisorEnabled} />
+          </div>
+          <TextAreaField
+            name="sizeAdvisorChart"
+            label="Brand size chart (JSON)"
+            defaultValue={values.sizeAdvisorChart}
+            inputClassName="min-h-[120px] font-mono text-xs"
+            hint="Array of {size, chest:[lo,hi], height:[lo,hi], weight:[lo,hi]} — body measurements in cm."
+            className="mt-4"
+          />
+          <I18nInput name="sizeAdvisorNote" label="Size note" en={values.sizeAdvisorNoteEn} bn={values.sizeAdvisorNoteBn} layout="stack" className="mt-4" />
+        </Section>
+
+        <Section title="Brand voice">
+          <TextAreaField
+            name="brandVoice"
+            defaultValue={values.brandVoice}
+            inputClassName="min-h-[80px] text-sm"
+            hint="Injected into the system prompt as writing style guidance."
+          />
+        </Section>
+
+        <Section title="Writer">
+          <div className="divide-y divide-line/70">
+            <ToggleRow name="writerEnabled" label="Writer tool enabled" hint="Used by other studio tools to generate copy in the brand voice." defaultChecked={values.writerEnabled} />
+          </div>
+          <TextField
+            name="writerTemperature"
+            label="Writer temperature"
+            type="number"
+            min={0}
+            max={1.5}
+            step={0.1}
+            defaultValue={String(values.writerTemperature)}
+            hint="Higher = more creative output from the writer. 0.7 is a good default."
+            className="mt-4"
+          />
         </Section>
 
         <Section title="Limits">

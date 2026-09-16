@@ -25,12 +25,13 @@ export default async function ConciergePage({ searchParams }: { searchParams: Pr
 
   const where: Prisma.AiConversationWhereInput = onlyFlagged ? { flagged: true } : {};
 
-  const [ai, total, flaggedCount, convos, csrf] = await Promise.all([
+  const [ai, total, flaggedCount, convos, csrf, openRequestCount] = await Promise.all([
     getSetting("ai"),
     db.aiConversation.count({ where }),
     db.aiConversation.count({ where: { flagged: true } }),
     db.aiConversation.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
     csrfToken(),
+    db.conciergeRequest.count({ where: { status: "open" } }),
   ]);
 
   const rows: ConvoRow[] = convos.map((c) => {
@@ -73,6 +74,35 @@ export default async function ConciergePage({ searchParams }: { searchParams: Pr
         }
       />
 
+      {/* Navigation tabs */}
+      <div className="mb-4 flex flex-wrap gap-1">
+        <Link
+          href="/admin/concierge"
+          className="border border-ink bg-ink px-3 py-2 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-paper"
+        >
+          Conversations
+        </Link>
+        <Link
+          href="/admin/concierge/requests"
+          className={cn(
+            "flex items-center gap-1.5 border px-3 py-2 text-[0.62rem] font-semibold uppercase tracking-[0.14em] transition",
+            "border-line text-muted hover:border-ink hover:text-ink",
+          )}
+        >
+          Requests
+          {openRequestCount > 0 && (
+            <span className="tabular-nums text-warning">{openRequestCount}</span>
+          )}
+        </Link>
+        <Link
+          href="/admin/concierge/test"
+          className="border border-line px-3 py-2 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted transition hover:border-ink hover:text-ink"
+        >
+          Test console
+        </Link>
+      </div>
+
+      {/* Filter tabs */}
       <div className="mb-4 flex gap-1">
         <Link
           href="/admin/concierge"

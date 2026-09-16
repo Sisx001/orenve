@@ -143,7 +143,7 @@ export function CurrencyForm({
         </p>
       </Section>
 
-      <Section title="Languages">
+      <Section title="Languages" description="Built-in languages only. Add more languages, generate translations and review them under Settings → Languages & translation.">
         <div className="space-y-2">
           {SUPPORTED_LOCALES.map((l) => (
             <CheckboxField

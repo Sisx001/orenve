@@ -4,6 +4,8 @@ import { Toaster } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { can, getCurrentUser } from "@/lib/auth/session";
 import { PERMISSIONS } from "@/lib/constants";
+import { getEnabledLocales } from "@/lib/i18n/registry";
+import { StudioLocalesProvider } from "@/components/admin/StudioLocales";
 import "../globals.css";
 
 export const metadata: Metadata = {
@@ -40,16 +42,20 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   const permissions = Object.fromEntries(Object.keys(PERMISSIONS).map((p) => [p, can(user, p)]));
+  // Languages the studio edits content in (built-in + registry). Feeds every I18nInput.
+  const locales = (await getEnabledLocales()).map((l) => ({ code: l.code, name: l.name, nativeName: l.nativeName, dir: l.dir, font: l.font }));
 
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <body className="bg-paper text-ink antialiased">
-        <AdminShell
-          user={{ id: user.id, name: user.name, email: user.email, role: user.role, totpEnabled: user.totpEnabled }}
-          permissions={permissions}
-        >
-          {children}
-        </AdminShell>
+        <StudioLocalesProvider locales={locales}>
+          <AdminShell
+            user={{ id: user.id, name: user.name, email: user.email, role: user.role, totpEnabled: user.totpEnabled }}
+            permissions={permissions}
+          >
+            {children}
+          </AdminShell>
+        </StudioLocalesProvider>
         <Toaster position="top-right" theme="light" richColors closeButton />
       </body>
     </html>

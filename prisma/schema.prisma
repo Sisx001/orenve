@@ -31,10 +31,10 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  sessions   Session[]
-  auditLogs  AuditLog[]
+  sessions    Session[]
+  auditLogs   AuditLog[]
   orderEvents OrderEvent[]
-  payments   Payment[]   @relation("VerifiedPayments")
+  payments    Payment[]    @relation("VerifiedPayments")
 }
 
 model Session {
@@ -53,10 +53,10 @@ model Session {
 }
 
 model LoginAttempt {
-  key         String   @id // sha256(ip:email)
-  count       Int      @default(0)
+  key         String    @id // sha256(ip:email)
+  count       Int       @default(0)
   lockedUntil DateTime?
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
 }
 
 model RateEvent {
@@ -170,18 +170,18 @@ model ProductOption {
 }
 
 model ProductVariant {
-  id         String  @id @default(cuid())
-  productId  String
-  sku        String? @unique
-  title      String // "M / Onyx"
-  options    String // JSON {"Size":"M","Color":"Onyx"}
-  price      Int? // override product price when set
-  stock      Int     @default(0)
-  lowStockAt Int     @default(3)
+  id          String  @id @default(cuid())
+  productId   String
+  sku         String? @unique
+  title       String // "M / Onyx"
+  options     String // JSON {"Size":"M","Color":"Onyx"}
+  price       Int? // override product price when set
+  stock       Int     @default(0)
+  lowStockAt  Int     @default(3)
   weightGrams Int?
-  imageId    String?
-  isActive   Boolean @default(true)
-  position   Int     @default(0)
+  imageId     String?
+  isActive    Boolean @default(true)
+  position    Int     @default(0)
 
   product    Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
   image      ProductImage? @relation(fields: [imageId], references: [id], onDelete: SetNull)
@@ -299,36 +299,39 @@ model Order {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  customer  Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  items     OrderItem[]
-  events    OrderEvent[]
-  payments  Payment[]
-  shipments Shipment[]
+  customer          Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items             OrderItem[]
+  events            OrderEvent[]
+  payments          Payment[]
+  shipments         Shipment[]
+  conciergeRequests ConciergeRequest[]
 
   @@index([status])
   @@index([phone])
   @@index([placedAt])
 }
 
-/** A consignment booked with a courier (API or manual). */
+/**
+ * A consignment booked with a courier (API or manual).
+ */
 model Shipment {
-  id             String    @id @default(cuid())
-  orderId        String
-  provider       String // pathao | steadfast | redx | paperfly | manual
-  consignmentId  String? // provider's id
-  trackingCode   String? // provider tracking number
-  trackingUrl    String?
-  status         String    @default("booked") // booked | picked | in_transit | delivered | returned | cancelled | failed
-  rawStatus      String?
-  codAmount      Int       @default(0)
-  deliveryFee    Int?
-  weightGrams    Int?
-  note           String?
-  rawPayload     String? // JSON of last provider response
-  lastSyncedAt   DateTime?
-  createdById    String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  orderId       String
+  provider      String // pathao | steadfast | redx | paperfly | manual
+  consignmentId String? // provider's id
+  trackingCode  String? // provider tracking number
+  trackingUrl   String?
+  status        String    @default("booked") // booked | picked | in_transit | delivered | returned | cancelled | failed
+  rawStatus     String?
+  codAmount     Int       @default(0)
+  deliveryFee   Int?
+  weightGrams   Int?
+  note          String?
+  rawPayload    String? // JSON of last provider response
+  lastSyncedAt  DateTime?
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
@@ -336,40 +339,44 @@ model Shipment {
   @@index([provider, consignmentId])
 }
 
-/** Studio-added or corrected geography entries merged over the bundled BD dataset. */
+/**
+ * Studio-added or corrected geography entries merged over the bundled BD dataset.
+ */
 model GeoOverride {
-  id         String   @id @default(cuid())
-  level      String // district | upazila | area | postcode
-  parentId   String? // districtId for upazila/area/postcode; divisionId for district
-  en         String
-  bn         String?
-  code       String? // postcode
-  lat        Float?
-  lng        Float?
-  isHidden   Boolean  @default(false) // hide a bundled entry
-  targetKey  String? // bundled entry key being hidden/renamed
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  level     String // district | upazila | area | postcode
+  parentId  String? // districtId for upazila/area/postcode; divisionId for district
+  en        String
+  bn        String?
+  code      String? // postcode
+  lat       Float?
+  lng       Float?
+  isHidden  Boolean  @default(false) // hide a bundled entry
+  targetKey String? // bundled entry key being hidden/renamed
+  createdAt DateTime @default(now())
 
   @@index([level, parentId])
 }
 
-/** Privacy-friendly first-party analytics (no cookies, hashed IP). */
+/**
+ * Privacy-friendly first-party analytics (no cookies, hashed IP).
+ */
 model Visit {
-  id         String   @id @default(cuid())
-  day        String // YYYY-MM-DD
-  path       String
-  locale     String?
-  referrer   String?
-  utmSource  String?
-  utmMedium  String?
+  id          String   @id @default(cuid())
+  day         String // YYYY-MM-DD
+  path        String
+  locale      String?
+  referrer    String?
+  utmSource   String?
+  utmMedium   String?
   utmCampaign String?
-  country    String?
-  device     String? // mobile | tablet | desktop | tv | bot
-  browser    String?
-  ipHash     String // sha256(ip + daily salt)
-  visitorKey String // sha256(ipHash + ua) for unique counting
-  durationMs Int?
-  createdAt  DateTime @default(now())
+  country     String?
+  device      String? // mobile | tablet | desktop | tv | bot
+  browser     String?
+  ipHash      String // sha256(ip + daily salt)
+  visitorKey  String // sha256(ipHash + ua) for unique counting
+  durationMs  Int?
+  createdAt   DateTime @default(now())
 
   @@index([day])
   @@index([path])
@@ -452,15 +459,15 @@ model Coupon {
 }
 
 model ShippingZone {
-  id        String  @id @default(cuid())
-  name      String // JSON i18n
-  districts String // JSON string[] ("*" = everywhere else)
-  rate      Int
-  freeAbove Int?
-  etaMinDays Int    @default(2)
-  etaMaxDays Int    @default(5)
-  isActive  Boolean @default(true)
-  sortOrder Int     @default(0)
+  id         String  @id @default(cuid())
+  name       String // JSON i18n
+  districts  String // JSON string[] ("*" = everywhere else)
+  rate       Int
+  freeAbove  Int?
+  etaMinDays Int     @default(2)
+  etaMaxDays Int     @default(5)
+  isActive   Boolean @default(true)
+  sortOrder  Int     @default(0)
 }
 
 // ───────────────────────────── Content ─────────────────────────────
@@ -515,13 +522,68 @@ model Setting {
 }
 
 model Translation {
-  id        String @id @default(cuid())
+  id        String   @id @default(cuid())
   locale    String
-  namespace String @default("common")
+  namespace String   @default("common")
   key       String
   value     String
+  machine   Boolean  @default(false) // produced by the AI translation engine
+  approved  Boolean  @default(true) // reviewed by a human (machine rows start false)
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@unique([locale, namespace, key])
+  @@index([locale, approved])
+}
+
+/// Storefront languages beyond the built-in en/bn. Dictionary lives in Translation rows.
+model Language {
+  code       String   @id // BCP-47 primary subtag, e.g. "hi", "ar", "fr"
+  name       String // English name
+  nativeName String
+  dir        String   @default("ltr") // ltr | rtl
+  font       String? // Google Font family for this script (optional)
+  flag       String?
+  enabled    Boolean  @default(false) // visible in the storefront switcher
+  isMachine  Boolean  @default(true) // dictionary was machine-generated
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+/// Tracks machine-translated content fields (product names, page bodies…) for the review queue.
+model ContentTranslation {
+  id         String   @id @default(cuid())
+  model      String // product | category | collection | page | block | setting
+  recordId   String
+  field      String
+  locale     String
+  machine    Boolean  @default(true)
+  approved   Boolean  @default(false)
+  sourceHash String? // hash of the English source when translated; stale when it changes
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([model, recordId, field, locale])
+  @@index([locale, approved])
+}
+
+/// Requests raised through the concierge after the customer verified an order (cancel, address change…).
+model ConciergeRequest {
+  id             String    @id @default(cuid())
+  orderId        String
+  orderNumber    String
+  type           String // cancel | address | other
+  details        String
+  status         String    @default("open") // open | resolved | rejected
+  conversationId String?
+  locale         String    @default("en")
+  createdAt      DateTime  @default(now())
+  resolvedAt     DateTime?
+  resolvedById   String?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
 }
 
 model Subscriber {

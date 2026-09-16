@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { Field, I18nInput, MoneyInput, SelectField, SubmitButton, TextAreaField, TextField, CheckboxField, FormBanner } from "@/components/admin/Fields";
+import type { AiWriteConfig } from "@/components/admin/AiWrite";
 import { MediaPicker } from "@/components/admin/MediaPicker";
 import { saveProductAction } from "@/lib/admin/actions/products";
 import { idleState } from "@/lib/admin/action-state";
@@ -280,7 +281,14 @@ export function ProductEditor({
 
           <div className="card p-4 sm:p-5">
             <h3 className="mb-4 text-[0.68rem] font-semibold uppercase tracking-[0.16em]">Merchandising</h3>
-            <I18nInput name="badge" label="Badge" en={data.badge.en} bn={data.badge.bn} layout="stack" placeholder="Last few" />
+            <I18nInput
+              name="badge"
+              label="Badge"
+              values={{ en: data.badge.en, bn: data.badge.bn }}
+              layout="stack"
+              placeholder="Last few"
+              ai={{ task: "generic", context: { name: data.name.en } } satisfies AiWriteConfig}
+            />
             <TextField name="tags" label="Tags" defaultValue={data.tags} className="mt-4" placeholder="overshirt, heavyweight, collection-001" hint="Comma separated. Used by search and the AI concierge." />
           </div>
         </div>
@@ -331,23 +339,73 @@ export function ProductEditor({
         <div className="card p-4 sm:p-5">
           <h3 className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em]">Description</h3>
           <p className="mb-4 text-xs text-muted">{MARKDOWN_HELP}</p>
-          <TextAreaField name="description_en" label="English" defaultValue={data.description.en} inputClassName="min-h-[220px]" />
-          <TextAreaField name="description_bn" label="বাংলা" defaultValue={data.description.bn} className="mt-4" inputClassName="min-h-[220px] font-bangla" />
+          <I18nInput
+            name="description"
+            values={{ en: data.description.en, bn: data.description.bn }}
+            multiline
+            rows={9}
+            ai={
+              {
+                task: "product_description",
+                context: {
+                  name: data.name.en,
+                  category: data.categoryId,
+                  price: data.price != null ? data.price : undefined,
+                  material: data.details.material.en,
+                  fit: data.details.fit.en,
+                  care: data.details.care.en,
+                },
+              } satisfies AiWriteConfig
+            }
+          />
         </div>
         <div className="card p-4 sm:p-5">
           <h3 className="mb-4 text-[0.68rem] font-semibold uppercase tracking-[0.16em]">Details accordion</h3>
           <div className="space-y-4">
-            {(
-              [
-                ["details_material", "Material", data.details.material],
-                ["details_fit", "Fit", data.details.fit],
-                ["details_care", "Care", data.details.care],
-                ["details_shipping", "Shipping", data.details.shipping],
-                ["details_returns", "Returns", data.details.returns],
-              ] as const
-            ).map(([name, label, value]) => (
-              <I18nInput key={name} name={name} label={label} en={value.en} bn={value.bn} multiline rows={3} />
-            ))}
+            <I18nInput
+              name="details_material"
+              label="Material"
+              values={{ en: data.details.material.en, bn: data.details.material.bn }}
+              multiline
+              rows={3}
+            />
+            <I18nInput
+              name="details_fit"
+              label="Fit"
+              values={{ en: data.details.fit.en, bn: data.details.fit.bn }}
+              multiline
+              rows={3}
+              ai={
+                {
+                  task: "size_notes",
+                  context: {
+                    name: data.name.en,
+                    material: data.details.material.en,
+                  },
+                } satisfies AiWriteConfig
+              }
+            />
+            <I18nInput
+              name="details_care"
+              label="Care"
+              values={{ en: data.details.care.en, bn: data.details.care.bn }}
+              multiline
+              rows={3}
+            />
+            <I18nInput
+              name="details_shipping"
+              label="Shipping"
+              values={{ en: data.details.shipping.en, bn: data.details.shipping.bn }}
+              multiline
+              rows={3}
+            />
+            <I18nInput
+              name="details_returns"
+              label="Returns"
+              values={{ en: data.details.returns.en, bn: data.details.returns.bn }}
+              multiline
+              rows={3}
+            />
           </div>
         </div>
       </section>
@@ -818,8 +876,34 @@ export function ProductEditor({
       <section className={cn("grid gap-5 xl:grid-cols-2", tab !== "seo" && "hidden")}>
         <div className="card p-4 sm:p-5">
           <h3 className="mb-4 text-[0.68rem] font-semibold uppercase tracking-[0.16em]">Search appearance</h3>
-          <I18nInput name="seoTitle" label="SEO title" en={data.seoTitle.en} bn={data.seoTitle.bn} layout="stack" placeholder="The Oxide Overshirt — ORYNVE" />
-          <I18nInput name="seoDescription" label="Meta description" en={data.seoDescription.en} bn={data.seoDescription.bn} multiline rows={3} layout="stack" className="mt-4" />
+          <I18nInput
+            name="seoTitle"
+            label="SEO title"
+            values={{ en: data.seoTitle.en, bn: data.seoTitle.bn }}
+            layout="stack"
+            placeholder="The Oxide Overshirt — ORYNVE"
+            ai={
+              {
+                task: "seo_title",
+                context: { name: data.name.en, description: data.description.en },
+              } satisfies AiWriteConfig
+            }
+          />
+          <I18nInput
+            name="seoDescription"
+            label="Meta description"
+            values={{ en: data.seoDescription.en, bn: data.seoDescription.bn }}
+            multiline
+            rows={3}
+            layout="stack"
+            className="mt-4"
+            ai={
+              {
+                task: "seo_description",
+                context: { name: data.name.en, description: data.description.en },
+              } satisfies AiWriteConfig
+            }
+          />
         </div>
         <div className="card p-4 sm:p-5">
           <h3 className="mb-4 text-[0.68rem] font-semibold uppercase tracking-[0.16em]">Preview</h3>

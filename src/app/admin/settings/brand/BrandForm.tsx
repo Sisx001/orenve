@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 import { Field, FormBanner, I18nInput, SelectField, SubmitButton, TextField, ToggleRow } from "@/components/admin/Fields";
+import type { AiWriteConfig } from "@/components/admin/AiWrite";
 import { MediaField } from "@/components/admin/MediaPicker";
 import { Section } from "@/components/admin/PageHeader";
 import { Monogram, Wordmark } from "@/components/brand/Logo";
@@ -52,7 +53,14 @@ export function BrandForm({ values, csrf }: { values: BrandValues; csrf: string 
         <Section title="Identity">
           <FormBanner state={state} />
           <TextField name="name" label="Brand name" value={name} onChange={(e) => setName(e.target.value)} required hint="Used in the wordmark, invoices and page titles." />
-          <I18nInput name="tagline" label="Tagline" en={values.taglineEn} bn={values.taglineBn} layout="stack" className="mt-4" />
+          <I18nInput
+            name="tagline"
+            label="Tagline"
+            values={{ en: values.taglineEn, bn: values.taglineBn }}
+            layout="stack"
+            className="mt-4"
+            ai={{ task: "tagline", context: { brand: name } } satisfies AiWriteConfig}
+          />
 
           <div className="mt-5 border-t border-line pt-4">
             <p className="mb-2 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted">Logo</p>
@@ -110,7 +118,13 @@ export function BrandForm({ values, csrf }: { values: BrandValues; csrf: string 
         </Section>
 
         <Section title="Announcement bar">
-          <I18nInput name="announcement" label="Message" en={values.announcementEn} bn={values.announcementBn} layout="stack" />
+          <I18nInput
+            name="announcement"
+            label="Message"
+            values={{ en: values.announcementEn, bn: values.announcementBn }}
+            layout="stack"
+            ai={{ task: "announcement", context: { brand: name } } satisfies AiWriteConfig}
+          />
           <TextField name="announcementLink" label="Link" defaultValue={values.announcementLink} className="mt-4" placeholder="/shop" />
           <div className="mt-2">
             <ToggleRow name="showAnnouncement" label="Show the announcement bar" defaultChecked={values.showAnnouncement} />

@@ -20,10 +20,12 @@ ORYNVE v2 is a production-ready e-commerce platform for a premium menswear brand
 Dashboard, orders pipeline, manual order entry for WhatsApp/Messenger/phone orders, order tracking events visible to customers and the AI concierge, payment verification for bKash/Nagad TrxIDs, products and variants with inventory, customers, coupons, shipping zones, static pages, homepage blocks, media library, branding and theme editor, feature toggles, checkout settings, currencies, translations, AI concierge settings, users and roles with optional TOTP 2FA, audit log, and backup.
 
 ### AI concierge
-On-site chat widget powered by any OpenAI-compatible API endpoint (DeepSeek, OpenAI, Groq, OpenRouter, Ollama, …). The concierge can look up a customer's own order (requires order number or tracking code + phone match) and search the product catalogue. All inference runs server-side; the model never sees API keys or other customers' data. See [docs/AI_CONCIERGE.md](docs/AI_CONCIERGE.md).
+On-site chat widget powered by any OpenAI-compatible API endpoint (DeepSeek, OpenAI, Groq, OpenRouter, Ollama, …). Streams replies, renders product and order cards built server-side from tool results, recommends sizes from the product's size guide or your brand fit table, and lets a customer who has verified their order (number + phone) raise cancel / address-change **requests** that land in the studio inbox — never changing the order itself. The studio has a test console with a 14-case jailbreak suite, and an AI writer (Write / Improve / Translate) on every bilingual field. All inference runs server-side; the model never sees API keys or other customers' data. See [docs/AI_CONCIERGE.md](docs/AI_CONCIERGE.md).
 
 ### Payments
 | Method | Type |
+Cash on delivery (optional handling fee and maximum order value), manual bKash / Nagad send-money with TrxID verification, **bKash Checkout**, **Nagad**, **SSLCommerz**, **aamarPay**, **shurjoPay** and **Stripe** — every gateway's keys are entered in Settings → Checkout & payments (environment variables work as a fallback). See [docs/PAYMENTS.md](docs/PAYMENTS.md).
+
 |---|---|
 | Cash on Delivery (COD) | Manual; confirmed by staff |
 | bKash Send-Money | Manual MFS; TrxID verified in studio |
@@ -34,7 +36,7 @@ On-site chat widget powered by any OpenAI-compatible API endpoint (DeepSeek, Ope
 Each method has an on/off toggle in the studio. See [docs/PAYMENTS.md](docs/PAYMENTS.md).
 
 ### i18n
-English (`en`) and Bangla (`bn`) are built in. Content fields are stored as JSON `{"en":"…","bn":"…"}`. Per-key overrides are editable in the studio under Translations. Adding a locale requires three small changes — see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
+English (`en`) and Bangla (`bn`) are built in. Any further language is added from **Settings → Languages & translation**: the AI engine generates the interface dictionary and translates products, pages, collections, homepage blocks and brand/SEO copy in resumable steps; you review and approve in a queue with a coverage meter; each language gets its own script font and text direction (RTL supported). Content fields are stored as JSON `{"en":"…","bn":"…","hi":"…"}` with English fallback. See [docs/LANGUAGES.md](docs/LANGUAGES.md).
 
 ### Security
 scrypt password hashing, httpOnly sliding-window session cookies (14-day TTL), CSRF double-submit pattern (`ory_csrf` cookie + `x-csrf-token` header), database-backed rate limiting, RBAC (owner / admin / editor / support), optional TOTP 2FA, audit log, CSP and security headers. See [docs/SECURITY.md](docs/SECURITY.md).
