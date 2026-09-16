@@ -15,7 +15,8 @@ export type NavItem = {
 export type NavGroup = { title: string; items: NavItem[] };
 
 export const SETTINGS_CHILDREN = [
-  { href: "/admin/settings/brand", label: "Brand & theme" },
+  { href: "/admin/settings/brand", label: "Brand" },
+  { href: "/admin/settings/themes", label: "Themes" },
   { href: "/admin/settings/features", label: "Features" },
   { href: "/admin/settings/checkout", label: "Checkout & payments" },
   { href: "/admin/settings/couriers", label: "Couriers" },
@@ -93,7 +94,8 @@ export const CRUMB_LABELS: Record<string, string> = {
   "/admin/concierge": "Concierge",
   "/admin/profile": "Your profile",
   "/admin/settings": "Settings",
-  "/admin/settings/brand": "Brand & theme",
+  "/admin/settings/brand": "Brand",
+  "/admin/settings/themes": "Themes",
   "/admin/settings/features": "Features",
   "/admin/settings/checkout": "Checkout & payments",
   "/admin/settings/currency": "Currencies & locales",

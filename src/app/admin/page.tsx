@@ -5,11 +5,15 @@ import {
   Bot,
   Check,
   CreditCard,
+  Layers,
+  Mail,
   PackageCheck,
   Plus,
   Receipt,
   TrendingUp,
   Boxes,
+  FileText,
+  Settings,
 } from "lucide-react";
 import { PageHeader, Section } from "@/components/admin/PageHeader";
 import { Sparkline } from "@/components/admin/Sparkline";
@@ -21,6 +25,7 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+// ─────────────────────── KPI card ─────────────────────────────────────────────
 function Kpi({
   label,
   value,
@@ -43,6 +48,7 @@ function Kpi({
         href && "hover:border-ink",
         tone === "warning" && "border-warning/40 bg-warning/[0.04]",
         tone === "danger" && "border-danger/40 bg-danger/[0.04]",
+        tone === "success" && "border-success/40 bg-success/[0.04]",
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -50,7 +56,13 @@ function Kpi({
         <Icon
           className={cn(
             "h-3.5 w-3.5 shrink-0",
-            tone === "warning" ? "text-warning" : tone === "danger" ? "text-danger" : tone === "success" ? "text-success" : "text-muted",
+            tone === "warning"
+              ? "text-warning"
+              : tone === "danger"
+              ? "text-danger"
+              : tone === "success"
+              ? "text-success"
+              : "text-muted",
           )}
         />
       </div>
@@ -66,6 +78,36 @@ function Kpi({
   return href ? <Link href={href}>{body}</Link> : body;
 }
 
+// ─────────────────────── Quick action button ───────────────────────────────────
+function QuickAction({
+  href,
+  icon: Icon,
+  label,
+  description,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  description?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group card flex items-center gap-3 p-4 transition hover:border-ink"
+    >
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-line bg-bone transition group-hover:border-oxide group-hover:bg-oxide/10">
+        <Icon className="h-4 w-4 text-muted group-hover:text-oxide" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        {description && <p className="text-xs text-muted">{description}</p>}
+      </div>
+      <ArrowUpRight className="ml-auto h-3.5 w-3.5 text-muted opacity-0 transition group-hover:opacity-100" />
+    </Link>
+  );
+}
+
+// ─────────────────────── Page ─────────────────────────────────────────────────
 export default async function AdminDashboardPage({
   searchParams,
 }: {
@@ -78,11 +120,20 @@ export default async function AdminDashboardPage({
   const [stats, checklist] = await Promise.all([getDashboardStats(), getSetupChecklist()]);
   const outstanding = checklist.filter((c) => !c.done);
 
+  // Greeting
+  const firstName = user.name.split(" ")[0];
+  const todayStr = new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
   return (
     <div className="mx-auto max-w-[1400px]">
       <PageHeader
-        title={`Good to see you, ${user.name.split(" ")[0]}`}
-        description="Everything the storefront did in the last 30 days, and what needs you today."
+        title={`Good to see you, ${firstName}`}
+        description={todayStr}
         actions={
           <>
             <Link href="/admin/products/new" className="btn px-4 py-2.5 text-[0.65rem]">
@@ -101,19 +152,34 @@ export default async function AdminDashboardPage({
         }
       />
 
+      {/* Permission denied notice */}
       {denied && (
         <div className="mb-5 border border-warning/40 bg-warning/10 px-3.5 py-2.5 text-sm text-warning">
-          Your role does not include <span className="font-mono">{denied}</span> — ask the owner for access.
+          Your role does not include{" "}
+          <span className="font-mono">{denied}</span> — ask the owner for access.
         </div>
       )}
 
+      {/* ── KPI row 1 ─────────────────────────────────────────────────── */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi label="Revenue · 30 days" value={formatMoney(stats.revenue30)} hint={`${stats.orders30} orders placed`} icon={TrendingUp} href="/admin/orders" />
-        <Kpi label="Orders today" value={String(stats.ordersToday)} hint={`${stats.ordersWeek} this week`} icon={Receipt} href="/admin/orders" />
+        <Kpi
+          label="Revenue · 30 days"
+          value={formatMoney(stats.revenue30)}
+          hint={`${stats.orders30} orders placed`}
+          icon={TrendingUp}
+          href="/admin/orders"
+        />
+        <Kpi
+          label="Orders today"
+          value={String(stats.ordersToday)}
+          hint={`${stats.ordersWeek} this week`}
+          icon={Receipt}
+          href="/admin/orders"
+        />
         <Kpi
           label="Pending confirmation"
           value={String(stats.pendingOrders)}
-          hint="Orders waiting for you to confirm"
+          hint="Orders waiting for confirmation"
           icon={PackageCheck}
           href="/admin/orders?status=pending"
           tone={stats.pendingOrders > 0 ? "warning" : undefined}
@@ -121,13 +187,14 @@ export default async function AdminDashboardPage({
         <Kpi
           label="Payments to verify"
           value={String(stats.awaitingPayments)}
-          hint="bKash / Nagad transactions submitted"
+          hint="bKash / Nagad TrxIDs submitted"
           icon={CreditCard}
           href="/admin/orders?payment=pending_verification"
           tone={stats.awaitingPayments > 0 ? "warning" : undefined}
         />
       </div>
 
+      {/* ── KPI row 2 ─────────────────────────────────────────────────── */}
       <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi
           label="Low stock variants"
@@ -137,8 +204,23 @@ export default async function AdminDashboardPage({
           href="/admin/inventory?low=1"
           tone={stats.lowStockCount > 0 ? "danger" : undefined}
         />
-        <Kpi label="Concierge chats · 7 days" value={String(stats.aiConvos7)} hint={`${stats.aiFlagged} flagged all-time`} icon={Bot} href="/admin/concierge" />
-        <div className="card p-4 sm:col-span-2">
+        <Kpi
+          label="Open concierge requests"
+          value={String(stats.openConciergeCount)}
+          hint="Cancellation and address changes"
+          icon={Bot}
+          href="/admin/concierge/requests"
+          tone={stats.openConciergeCount > 0 ? "warning" : undefined}
+        />
+        <Kpi
+          label="New messages"
+          value={String(stats.newMessagesCount)}
+          hint="Unread contact messages"
+          icon={Mail}
+          href="/admin/messages"
+          tone={stats.newMessagesCount > 0 ? "warning" : undefined}
+        />
+        <div className="card p-4">
           <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted">Average order value · 30 days</p>
           <p className="display mt-2.5 text-2xl tabular-nums leading-none">
             {formatMoney(stats.orders30 > 0 ? Math.round(stats.revenue30 / stats.orders30) : 0)}
@@ -147,6 +229,63 @@ export default async function AdminDashboardPage({
         </div>
       </div>
 
+      {/* ── Attention panel ───────────────────────────────────────────── */}
+      {(stats.awaitingPayments > 0 || stats.pendingOrders > 0 || stats.openConciergeCount > 0) && (
+        <Section title="Needs your attention" className="mt-5">
+          <ul className="divide-y divide-line/70">
+            {stats.awaitingPayments > 0 && (
+              <li className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center bg-warning/10">
+                    <CreditCard className="h-3.5 w-3.5 text-warning" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium">{stats.awaitingPayments} payment{stats.awaitingPayments > 1 ? "s" : ""} awaiting verification</p>
+                    <p className="text-xs text-muted">bKash or Nagad TrxIDs submitted by customers</p>
+                  </div>
+                </div>
+                <Link href="/admin/orders?payment=pending_verification" className="shrink-0 text-[0.62rem] uppercase tracking-[0.14em] text-oxide hover:underline">
+                  Review
+                </Link>
+              </li>
+            )}
+            {stats.pendingOrders > 0 && (
+              <li className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center bg-warning/10">
+                    <PackageCheck className="h-3.5 w-3.5 text-warning" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium">{stats.pendingOrders} order{stats.pendingOrders > 1 ? "s" : ""} pending confirmation</p>
+                    <p className="text-xs text-muted">Confirm to move the order to processing</p>
+                  </div>
+                </div>
+                <Link href="/admin/orders?status=pending" className="shrink-0 text-[0.62rem] uppercase tracking-[0.14em] text-oxide hover:underline">
+                  Review
+                </Link>
+              </li>
+            )}
+            {stats.openConciergeCount > 0 && (
+              <li className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center bg-warning/10">
+                    <Bot className="h-3.5 w-3.5 text-warning" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium">{stats.openConciergeCount} open concierge request{stats.openConciergeCount > 1 ? "s" : ""}</p>
+                    <p className="text-xs text-muted">Customers waiting for a response</p>
+                  </div>
+                </div>
+                <Link href="/admin/concierge/requests" className="shrink-0 text-[0.62rem] uppercase tracking-[0.14em] text-oxide hover:underline">
+                  Review
+                </Link>
+              </li>
+            )}
+          </ul>
+        </Section>
+      )}
+
+      {/* ── Setup checklist ───────────────────────────────────────────── */}
       {outstanding.length > 0 && (
         <Section
           title="Before you launch"
@@ -169,7 +308,10 @@ export default async function AdminDashboardPage({
                   {!item.done && <p className="mt-0.5 text-xs text-muted">{item.hint}</p>}
                 </div>
                 {!item.done && (
-                  <Link href={item.href} className="shrink-0 text-[0.62rem] uppercase tracking-[0.14em] text-oxide underline-offset-4 hover:underline">
+                  <Link
+                    href={item.href}
+                    className="shrink-0 text-[0.62rem] uppercase tracking-[0.14em] text-oxide underline-offset-4 hover:underline"
+                  >
                     Fix
                   </Link>
                 )}
@@ -179,6 +321,7 @@ export default async function AdminDashboardPage({
         </Section>
       )}
 
+      {/* ── Revenue chart + Low stock ─────────────────────────────────── */}
       <div className="mt-5 grid gap-5 xl:grid-cols-3">
         <Section title="Revenue & orders · last 30 days" className="xl:col-span-2">
           <Sparkline series={stats.series} />
@@ -207,7 +350,9 @@ export default async function AdminDashboardPage({
                   <span
                     className={cn(
                       "shrink-0 border px-2 py-0.5 text-[0.62rem] font-semibold tabular-nums",
-                      v.stock === 0 ? "border-danger/40 bg-danger/10 text-danger" : "border-warning/40 bg-warning/10 text-warning",
+                      v.stock === 0
+                        ? "border-danger/40 bg-danger/10 text-danger"
+                        : "border-warning/40 bg-warning/10 text-warning",
                     )}
                   >
                     {v.stock === 0 ? "Out" : `${v.stock} left`}
@@ -219,6 +364,7 @@ export default async function AdminDashboardPage({
         </Section>
       </div>
 
+      {/* ── Recent orders ─────────────────────────────────────────────── */}
       <Section
         title="Recent orders"
         className="mt-5"
@@ -277,6 +423,18 @@ export default async function AdminDashboardPage({
             </table>
           </div>
         )}
+      </Section>
+
+      {/* ── Quick actions ─────────────────────────────────────────────── */}
+      <Section title="Quick actions" className="mt-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <QuickAction href="/admin/products/new" icon={Plus} label="New product" description="Add a new product to your catalogue" />
+          <QuickAction href="/admin/orders/new" icon={Receipt} label="New manual order" description="Create an order on behalf of a customer" />
+          <QuickAction href="/admin/pages/new" icon={FileText} label="New page" description="Create an editorial or legal page" />
+          <QuickAction href="/admin/catalog" icon={Layers} label="Manage collections" description="Organise products into collections" />
+          <QuickAction href="/admin/settings" icon={Settings} label="Settings" description="Checkout, shipping, appearance and more" />
+          <QuickAction href="/admin/messages" icon={Mail} label="Messages" description="Respond to customer messages" />
+        </div>
       </Section>
     </div>
   );

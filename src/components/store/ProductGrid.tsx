@@ -22,8 +22,10 @@ export function ProductGrid({
   className?: string;
   priorityCount?: number;
 }) {
+  // `product-grid` lets `[data-grid="2|3"]` pin the column count from md up
+  // (see globals.css). `data-grid="4"` keeps the responsive ladder above.
   return (
-    <div className={cn(GRIDS[view], className)}>
+    <div className={cn(GRIDS[view], view === "grid" && "product-grid", className)}>
       {products.map((p, i) => (
         <ProductCard key={p.id} product={p} index={i % 6} view={view} priority={i < priorityCount} />
       ))}

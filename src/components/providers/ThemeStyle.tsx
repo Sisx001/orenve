@@ -1,36 +1,25 @@
 /**
- * Injects owner-configured brand tokens (accent colour, radius, fonts) as CSS
- * variables so the studio can retheme the storefront without a rebuild, and
- * loads any Google Font the owner picked (static weights — works for both
- * variable and static families).
+ * Emits everything the resolved theme needs into `<head>`:
+ *   • preconnects + one Google Fonts stylesheet for every non-built-in family
+ *   • the theme's `<style>` block (tokens for all three modes, radius, fonts,
+ *     `@font-face` rules for custom uploads, sanitised custom CSS)
+ *   • per-language font rules for studio-added languages, scoped to `[lang="xx"]`
+ *
+ * Token/CSS generation lives in `@/lib/theme/css` so the studio preview can
+ * reuse it; this component is only the plumbing.
  */
-function hexToRgb(hex: string): string | null {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
-  return m ? `${parseInt(m[1], 16)} ${parseInt(m[2], 16)} ${parseInt(m[3], 16)}` : null;
-}
+import type { ResolvedTheme } from "@/lib/theme/types";
+import { buildThemeCss, googleFontsHref, themeFontFamilies } from "@/lib/theme/css";
 
-/** Mix an "r g b" triple toward white so accents stay legible on the dark canvas. */
-function lift(rgb: string, amount: number): string {
-  return rgb
-    .split(" ")
-    .map((c) => Math.round(Number(c) + (255 - Number(c)) * amount))
-    .join(" ");
-}
+export { googleFontsHref };
 
-const BUILT_IN = new Set(["Fraunces", "Space Grotesk", "Hind Siliguri"]);
-const SYSTEM = new Set(["system-ui", "serif", "sans-serif", "Georgia", "Arial", "Helvetica", "Times New Roman"]);
+const esc = (s: string) => s.replace(/[^a-zA-Z0-9 ,'_-]/g, "").slice(0, 60);
+
+/** en/bn already have typography rules in globals.css — never re-declare them. */
+const SCOPED_SKIP = new Set(["en", "bn"]);
 
 export type ThemeStyleProps = {
-  accent: string;
-  brass: string;
-  radius: number;
-  fontDisplay: string;
-  fontSans: string;
-  fontBangla: string;
-  /** optional per-token overrides from the theme editor: { "--c-ink": "14 15 12", ... } */
-  tokens?: Record<string, string>;
-  darkTokens?: Record<string, string>;
-  customCss?: string;
+  theme: ResolvedTheme;
   /**
    * Extra storefront languages. Each one with a font gets that family loaded
    * and scoped to `[lang="xx"]`, so a studio-added language can carry its own
@@ -39,51 +28,19 @@ export type ThemeStyleProps = {
   languages?: { code: string; font: string | null; dir: string }[];
 };
 
-export function googleFontsHref(families: string[]): string | null {
-  const list = [...new Set(families.filter((f) => f && !BUILT_IN.has(f) && !SYSTEM.has(f)))];
-  if (!list.length) return null;
-  const q = list.map((f) => `family=${encodeURIComponent(f).replace(/%20/g, "+")}:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400`).join("&");
-  return `https://fonts.googleapis.com/css2?${q}&display=swap`;
-}
+export function ThemeStyle({ theme, languages }: ThemeStyleProps) {
+  const scoped = (languages ?? []).filter((l): l is { code: string; font: string; dir: string } => !!l.font && /^[a-z]{2,3}$/.test(l.code) && !SCOPED_SKIP.has(l.code));
 
-const esc = (s: string) => s.replace(/[^a-zA-Z0-9 ,'-]/g, "");
-const safeVar = (k: string) => /^--[a-z0-9-]+$/i.test(k);
-const safeVal = (v: string) => /^[\w\s.#%(),'"-]+$/.test(v);
-
-/** en/bn already have typography rules in globals.css — never re-declare them. */
-const SCOPED_SKIP = new Set(["en", "bn"]);
-
-export function ThemeStyle({ accent, brass, radius, fontDisplay, fontSans, fontBangla, tokens, darkTokens, customCss, languages }: ThemeStyleProps) {
-  const vars: string[] = [];
-  const a = hexToRgb(accent);
-  const b = hexToRgb(brass);
-  if (a) vars.push(`--c-oxide:${a}`);
-  if (b) vars.push(`--c-brass:${b}`);
-  vars.push(`--radius:${radius}px`);
-  if (fontDisplay) vars.push(`--font-display:'${esc(fontDisplay)}'`);
-  if (fontSans) vars.push(`--font-sans:'${esc(fontSans)}'`);
-  if (fontBangla) vars.push(`--font-bangla:'${esc(fontBangla)}'`);
-  for (const [k, v] of Object.entries(tokens ?? {})) if (safeVar(k) && safeVal(v)) vars.push(`${k}:${v}`);
-  // Dark canvas: unless the theme editor overrides them, lift the accents so the
-  // same brand hue clears WCAG AA on near-black. (Emitted unconditionally so the
-  // studio :root block above can never shadow the dark remap in globals.css.)
-  const dark: Record<string, string> = {};
-  if (a) dark["--c-oxide"] = lift(a, 0.22);
-  if (b) dark["--c-brass"] = lift(b, 0.12);
-  for (const [k, v] of Object.entries(darkTokens ?? {})) if (safeVar(k) && safeVal(v)) dark[k] = v;
-  const darkVars = Object.entries(dark).map(([k, v]) => `${k}:${v}`);
-
-  // Per-language script fonts for studio-added languages.
-  const scoped = (languages ?? []).filter((l) => l.font && /^[a-z]{2,3}$/.test(l.code) && !SCOPED_SKIP.has(l.code));
   const langCss = scoped
     .map((l) => {
-      const family = esc(l.font as string);
+      const family = esc(l.font);
       return `[lang="${l.code}"]{--font-sans:'${family}',sans-serif;--font-display:'${family}',serif}`;
     })
     .join("");
 
-  const href = googleFontsHref([fontDisplay, fontSans, fontBangla, ...scoped.map((l) => l.font as string)]);
-  const css = `:root{${vars.join(";")}}${darkVars.length ? `[data-theme="dark"]{${darkVars.join(";")}}` : ""}${langCss}${customCss ? `\n${customCss.replace(/<\/style/gi, "")}` : ""}`;
+  const href = googleFontsHref([...themeFontFamilies(theme), ...scoped.map((l) => l.font)]);
+  const css = `${buildThemeCss(theme)}${langCss ? `\n${langCss}` : ""}`;
+
   return (
     <>
       {href && (

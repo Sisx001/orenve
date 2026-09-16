@@ -58,7 +58,12 @@
     "enter": "Enter ORYNVE",
     "skipIntro": "Skip",
     "machineTranslated": "This language was translated automatically and is being reviewed. Spotted a mistake? Tell us.",
-    "languages": "Languages"
+    "languages": "Languages",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeBlack": "Black",
+    "themeSystem": "Match device",
+    "appearance": "Appearance"
   },
   "nav": {
     "shop": "Shop",

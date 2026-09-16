@@ -535,6 +535,44 @@ model Translation {
   @@index([locale, approved])
 }
 
+/// A complete storefront look: colour tokens per mode, typography, layout choices, custom CSS.
+/// Presets live in code (src/lib/theme/presets.ts); rows here are custom themes or edited copies.
+model Theme {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  description  String?
+  presetKey    String? // preset this theme was cloned from
+  light        String // JSON token map  { ink: "14 15 12", paper: "…", … }
+  dark         String // JSON token map
+  black        String // JSON token map (true-black mode)
+  typography   String // JSON { display, sans, bangla, scale, customFonts: [{ family, url, weight, style }] }
+  layout       String // JSON ThemeLayout (header, menu, footer, container, productGrid, cardStyle, buttonStyle, radius, motion, density)
+  customCss    String?
+  previewImage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignments ThemeAssignment[]
+}
+
+/// Applies a theme to part of the storefront and/or a time window (campaigns, Eid, sales…).
+model ThemeAssignment {
+  id          String    @id @default(cuid())
+  themeId     String
+  pathPattern String    @default("*") // "*", "/shop", "/collections/*", "/product/the-form-overcoat"
+  locale      String? // null = every language
+  startsAt    DateTime?
+  endsAt      DateTime?
+  priority    Int       @default(0) // higher wins
+  isEnabled   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  theme Theme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@index([isEnabled, priority])
+}
+
 /// Storefront languages beyond the built-in en/bn. Dictionary lives in Translation rows.
 model Language {
   code       String   @id // BCP-47 primary subtag, e.g. "hi", "ar", "fr"

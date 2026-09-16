@@ -40,7 +40,7 @@ export function ProductCard({
   const media = (
     <span
       className={cn(
-        "group/media relative block overflow-hidden bg-bone",
+        "card-media group/media relative block overflow-hidden bg-bone",
         view === "editorial" ? "aspect-[4/5]" : view === "list" ? "aspect-[3/4]" : "aspect-[3/4]",
       )}
     >
@@ -91,8 +91,8 @@ export function ProductCard({
   );
 
   const details = (
-    <div className={cn("flex flex-col gap-2", view === "list" ? "py-1" : "pt-4")}>
-      <div className="flex items-start justify-between gap-3">
+    <div className={cn("card-details flex flex-col gap-2", view === "list" ? "py-1" : "pt-4")}>
+      <div className="card-head flex items-start justify-between gap-3">
         <h3 className={cn("display leading-tight", view === "list" ? "text-display-sm" : "text-[1.05rem]")}>
           <LocaleLink href={`/product/${product.slug}`} className="hover:text-oxide" data-cursor={t("shop.quickView")}>
             {product.name}
@@ -132,6 +132,9 @@ export function ProductCard({
     </div>
   );
 
+  // `product-card` + `card-media` / `card-details` / `card-head` are the hooks the
+  // theme's `[data-cards="…"]` rules in globals.css style (minimal / bordered /
+  // overlay). List view opts out so its horizontal layout is never overridden.
   return (
     <motion.article
       initial={{ opacity: 0, y: 24 }}
@@ -140,7 +143,7 @@ export function ProductCard({
       transition={{ duration: DUR.base, ease: EASE, delay: stagger(index) }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      className={cn("group relative", view === "list" && "grid grid-cols-[minmax(7rem,14rem)_1fr] items-center gap-6 border-b border-line pb-8", className)}
+      className={cn("group relative", view === "list" ? "grid grid-cols-[minmax(7rem,14rem)_1fr] items-center gap-6 border-b border-line pb-8" : "product-card", className)}
     >
       <div className="relative">
         <LocaleLink href={`/product/${product.slug}`} className="block" aria-label={product.name}>

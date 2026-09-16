@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { getCsrfToken } from "@/lib/auth/csrf";
@@ -10,10 +10,16 @@ import { COOKIE_CURRENCY, COOKIE_LOCALE, COOKIE_THEME } from "@/lib/constants";
 import { listCategories, listCollections, getPages } from "@/lib/catalog";
 import { i18nText } from "@/lib/json";
 import { absoluteUrl } from "@/lib/utils";
+import { getCurrentUser } from "@/lib/auth/session";
+import { resolveTheme, getPageThemeOverrides } from "@/lib/theme/resolve";
+import { COOKIE_THEME_PREVIEW, effectiveMode, themeColorFor, toClientTheme } from "@/lib/theme/payload";
+import { layoutDataAttributes, type ThemeModePreference } from "@/lib/theme/types";
 import { ThemeStyle } from "@/components/providers/ThemeStyle";
 import { StoreProviders } from "@/components/store/StoreProviders";
-import { SiteHeader } from "@/components/store/SiteHeader";
-import { SiteFooter } from "@/components/store/SiteFooter";
+import { PageThemeSwitch } from "@/components/store/PageThemeSwitch";
+import { ThemePreviewSync } from "@/components/store/ThemePreviewSync";
+import { SiteHeader } from "@/components/store/header/SiteHeader";
+import { SiteFooter } from "@/components/store/footer/SiteFooter";
 import { CartDrawer } from "@/components/store/CartDrawer";
 import { SearchOverlay } from "@/components/store/SearchOverlay";
 import { QuickView } from "@/components/store/QuickView";
@@ -58,7 +64,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       images: [image],
       ...(seo.twitter ? { site: seo.twitter } : {}),
     },
-    robots: seo.robotsIndex ? { index: true, follow: true } : { index: false, follow: false },
+    // Theme previews (studio users only) must never be indexed, whatever the SEO setting says.
+    robots: seo.robotsIndex && !(await cookies()).get(COOKIE_THEME_PREVIEW)?.value ? { index: true, follow: true } : { index: false, follow: false },
     icons: { icon: "/icon.svg", apple: "/icon.svg" },
     manifest: "/manifest.webmanifest",
     formatDetection: { telephone: false },
@@ -102,31 +109,69 @@ export default async function LocaleLayout({ children, params }: { children: Rea
     }
   }
 
-  const cookieTheme = jar.get(COOKIE_THEME)?.value;
-  const brandTheme = config.brand.theme === "system" ? "light" : config.brand.theme;
-  const theme: "light" | "dark" = cookieTheme === "dark" || cookieTheme === "light" ? cookieTheme : brandTheme;
   const currency = jar.get(COOKIE_CURRENCY)?.value ?? config.currency.display.find((c) => c.enabled)?.code ?? "BDT";
+
+  /* ── Theme ───────────────────────────────────────────────────────────────
+     The layout resolves the *global* theme: the orynve preset overlaid with
+     brand settings, the active theme, and any assignment whose pattern covers
+     the whole storefront. Page-scoped assignments cannot be resolved here
+     (a layout has no access to the pathname), so they are handed to
+     `PageThemeSwitch` and applied on the client — see its file comment.
+
+     Preview is gated on a real studio session; the cookie alone proves nothing. */
+  const user = await getCurrentUser();
+  const allowPreview = !!user;
+  const previewId = allowPreview ? jar.get(COOKIE_THEME_PREVIEW)?.value ?? null : null;
+
+  const [theme, pageOverrides] = await Promise.all([
+    resolveTheme({ pathname: "*", locale, previewId, allowPreview }),
+    getPageThemeOverrides({ locale }),
+  ]);
+
+  // The visitor's stored preference may name a mode the owner has switched off;
+  // `effectiveMode` falls back to the first enabled mode in that case. "system"
+  // renders as light on the server and is corrected before paint by the inline
+  // bootstrap script below, so there is no flash.
+  const cookieMode = jar.get(COOKIE_THEME)?.value;
+  const preference: ThemeModePreference = cookieMode === "dark" || cookieMode === "light" || cookieMode === "black" || cookieMode === "system" ? cookieMode : theme.defaultMode;
+  const mode = effectiveMode(preference, theme.modes);
+  const clientTheme = toClientTheme(theme, preference, mode);
+  const isPreview = theme.source === "preview";
+
+  /* Runs before first paint: when the preference is "system" (or absent and the
+     owner's default is "system"), swap <html data-theme> to match the device so
+     a dark-mode visitor never sees a white flash. */
+  const bootstrap = `(function(){try{var m=document.cookie.match(/(?:^|; )ory_theme=([^;]*)/);var p=m?decodeURIComponent(m[1]):${JSON.stringify(theme.defaultMode)};if(p!=="system")return;var on=${JSON.stringify(theme.modes)};var d=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;var next=d?(on.dark?"dark":on.black?"black":"light"):(on.light?"light":on.dark?"dark":"black");var r=document.documentElement;r.setAttribute("data-theme",next);r.style.colorScheme=next==="light"?"light":"dark";}catch(e){}})();`;
 
   const aiOn = config.features.aiConcierge && config.ai.enabled;
 
   return (
-    <html lang={locale} dir={localeInfo.dir} data-theme={theme} suppressHydrationWarning>
+    <html
+      lang={locale}
+      dir={localeInfo.dir}
+      data-theme={mode}
+      data-eyebrows={theme.layout.uppercaseEyebrows ? "caps" : "sentence"}
+      {...layoutDataAttributes(theme.layout)}
+      suppressHydrationWarning
+    >
       <head>
-        <ThemeStyle
-          accent={config.brand.accent}
-          brass={config.brand.brass}
-          radius={config.brand.radius}
-          fontDisplay={config.brand.fontDisplay}
-          fontSans={config.brand.fontSans}
-          fontBangla={config.brand.fontBangla}
-          languages={config.locales.map((l) => ({ code: l.code, font: l.font, dir: l.dir }))}
-        />
-        <meta name="theme-color" content={theme === "dark" ? "#0e0f0c" : "#faf8f3"} />
+        <ThemeStyle theme={theme} languages={config.locales.map((l) => ({ code: l.code, font: l.font, dir: l.dir }))} />
+        <meta name="theme-color" content={themeColorFor(mode, { light: `rgb(${theme.light.paper})`, dark: `rgb(${theme.dark.paper})`, black: `rgb(${theme.black.paper})` })} />
+        <meta name="color-scheme" content={mode === "light" ? "light" : "dark"} />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         {config.features.pwa && <link rel="manifest" href="/manifest.webmanifest" />}
+        <script dangerouslySetInnerHTML={{ __html: bootstrap }} />
       </head>
       <body>
-        <StoreProviders locale={locale} dict={t.dict} config={config} initialCurrency={currency} initialTheme={theme}>
+        <StoreProviders locale={locale} dict={t.dict} config={config} initialCurrency={currency} theme={clientTheme}>
+          {pageOverrides.length > 0 && <PageThemeSwitch entries={pageOverrides.map((o) => ({ id: o.id, pattern: o.pattern, css: o.css, layout: o.layout }))} baseLayout={theme.layout} />}
+          {allowPreview && (
+            // useSearchParams() needs a Suspense boundary to keep the rest of
+            // the layout statically renderable.
+            <Suspense fallback={null}>
+              <ThemePreviewSync current={previewId} />
+            </Suspense>
+          )}
           <a
             href="#main-content"
             className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[130] focus:border focus:border-ink focus:bg-paper focus:px-4 focus:py-2 focus:text-[0.7rem] focus:font-semibold focus:uppercase focus:tracking-[0.16em]"

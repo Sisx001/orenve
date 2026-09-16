@@ -64,6 +64,25 @@
   color-scheme: dark;
 }
 
+/* True-black mode: OLED-friendly surfaces with slightly stronger hairlines so
+   dividers stay visible against #000. Same lifted accents as dark. */
+[data-theme="black"] {
+  --c-success: 76 175 110;
+  --c-warning: 224 170 60;
+  --c-danger: 232 96 84;
+  --c-ink: 243 239 230;
+  --c-paper: 0 0 0;
+  --c-bone: 12 12 12;
+  --c-line: 38 38 38;
+  --c-muted: 168 166 158;
+  --c-oxide: 214 104 62;
+  --c-brass: 214 178 110;
+  --fg: 243 239 230;
+  --bg: 0 0 0;
+  --bg-elev: 18 18 18;
+  color-scheme: dark;
+}
+
 /* Bangla (and other non-Latin locales) use the studio-selected Bangla face for
    both body and display, plus a type scale tuned for taller glyph stacks. */
 [lang="bn"] {
@@ -211,14 +230,17 @@
 }
 
 @layer components {
+  /* `--container-max` and `--space-section` are set by the theme layout data
+     attributes below. Unset (the shipped default) falls back to the original
+     values, so the default store is pixel-identical. */
   .container-page {
     width: 100%;
-    max-width: var(--page-max);
+    max-width: var(--container-max, var(--page-max));
     margin-inline: auto;
     padding-inline: var(--gutter);
   }
   .section {
-    padding-block: var(--section-gap);
+    padding-block: var(--space-section, var(--section-gap));
   }
   .eyebrow {
     @apply font-sans text-eyebrow font-medium uppercase tracking-[0.18em] text-muted;
@@ -321,12 +343,123 @@
   animation-duration: 0.35s;
 }
 
-/* Text on the accent colour: snow in light, coal on the lifted dark accent. */
+/* Text on the accent colour: snow in light, coal on the lifted dark accent.
+   `ThemeStyle` re-emits these per mode using the actual accent luminance, so a
+   custom palette gets whichever of snow/coal is legible; these are the
+   no-inline-style fallbacks. */
 [data-theme="dark"] .bg-oxide,
 [data-theme="dark"] .hover\:bg-oxide:hover,
-[data-theme="dark"] .btn-accent { color: rgb(var(--c-coal)); }
+[data-theme="dark"] .btn-accent,
+[data-theme="black"] .bg-oxide,
+[data-theme="black"] .hover\:bg-oxide:hover,
+[data-theme="black"] .btn-accent { color: rgb(var(--c-coal)); }
 .on-accent { color: rgb(var(--c-snow)); }
-[data-theme="dark"] .on-accent { color: rgb(var(--c-coal)); }
+[data-theme="dark"] .on-accent,
+[data-theme="black"] .on-accent { color: rgb(var(--c-coal)); }
 
 /* Dark surfaces inside a light page (studio sidebar): lift accents for AA. */
 .surface-dark { --c-oxide: 214 104 62; --c-brass: 214 178 110; }
+
+/* ═══════════════════ Theme layout data attributes ═══════════════════
+   Set on <html> by layoutDataAttributes() in src/lib/theme/types.ts. Every
+   *shipped default* value (container=regular, grid=4, cards=editorial,
+   buttons=square, density=regular, motion=full, grain=on, eyebrows=caps) has
+   no rule at all, so the default store renders exactly as it did before the
+   theme system existed. Reference: docs/THEMES.md. */
+
+/* ── Container width ── */
+[data-container="narrow"] { --container-max: 1180px; }
+[data-container="wide"] { --container-max: 1920px; }
+[data-container="full"] { --container-max: 100%; }
+
+/* ── Vertical density ── */
+[data-density="airy"] { --space-section: clamp(5rem, 11vw, 14rem); }
+[data-density="compact"] { --space-section: clamp(2.25rem, 5vw, 6rem); }
+
+/* ── Button corners ── */
+[data-buttons="rounded"] .btn,
+[data-buttons="rounded"] .btn-outline,
+[data-buttons="rounded"] .btn-accent { border-radius: var(--radius); }
+[data-buttons="pill"] .btn,
+[data-buttons="pill"] .btn-outline,
+[data-buttons="pill"] .btn-accent { border-radius: 999px; }
+
+/* ── Product grid columns. grid=4 keeps the responsive Tailwind ladder
+      (4 → 5 → 6 columns on 3xl/tv screens); 2 and 3 pin the count. ── */
+[data-grid="2"] { --grid-cols: 2; }
+[data-grid="3"] { --grid-cols: 3; }
+[data-grid="4"] { --grid-cols: 4; }
+@media (min-width: 768px) {
+  [data-grid="2"] .product-grid,
+  [data-grid="3"] .product-grid {
+    grid-template-columns: repeat(var(--grid-cols), minmax(0, 1fr));
+  }
+}
+
+/* ── Card styles. `editorial` (default) = image, then name/price in a row. ── */
+[data-cards="minimal"] .card-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+[data-cards="minimal"] .product-card .card-media { background: transparent; }
+
+[data-cards="bordered"] .product-card {
+  border: 1px solid rgb(var(--c-line));
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: rgb(var(--c-paper));
+}
+[data-cards="bordered"] .product-card .card-details { padding: 0.25rem 1rem 1.15rem; }
+
+/* Overlay: the details block is lifted onto the image with a scrim. */
+[data-cards="overlay"] .product-card .card-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to top, rgb(var(--c-coal) / 0.78) 0%, rgb(var(--c-coal) / 0.25) 38%, transparent 68%);
+}
+[data-cards="overlay"] .product-card .card-details {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 1.15rem 1.15rem 1.25rem;
+  color: rgb(var(--c-snow));
+  pointer-events: none;
+}
+[data-cards="overlay"] .product-card .card-details a,
+[data-cards="overlay"] .product-card .card-details .eyebrow,
+[data-cards="overlay"] .product-card .card-details .text-muted { color: rgb(var(--c-snow)); pointer-events: auto; }
+[data-cards="overlay"] .product-card .card-details .eyebrow { opacity: 0.78; }
+
+/* ── Film grain ── */
+[data-grain="off"] .grain::after { background-image: none; }
+
+/* ── Motion level. "reduced" keeps hover transitions but Framer reveals become
+      instant (StoreProviders passes reducedMotion="always"); "none" freezes
+      every animation and transition too. ── */
+[data-motion="reduced"] { scroll-behavior: auto; }
+[data-motion="none"] { scroll-behavior: auto; }
+[data-motion="none"] *,
+[data-motion="none"] *::before,
+[data-motion="none"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* ── Eyebrow casing ── */
+[data-eyebrows="sentence"] .eyebrow {
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+
+/* ── Transparent header sits over the hero until the page is scrolled. ── */
+[data-header="transparent"] .site-header[data-solid="false"] {
+  background: transparent;
+  backdrop-filter: none;
+  color: rgb(var(--c-snow));
+}
+[data-header="transparent"] .site-header[data-solid="false"] .text-muted { color: rgb(var(--c-snow) / 0.8); }

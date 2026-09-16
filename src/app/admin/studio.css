@@ -1,0 +1,238 @@
+/*
+ * Studio-only stylesheet. Imported in src/app/admin/layout.tsx after globals.css.
+ * Only affects /admin routes; never loaded on the storefront.
+ *
+ * Token format: RGB triplets (space-separated, no commas) to match the pattern
+ * in globals.css — Tailwind's opacity modifier relies on this.
+ */
+
+/* ─────────────────────── Studio dark theme ─────────────────────── */
+html[data-studio-theme="dark"] {
+  /* Background surfaces */
+  --c-paper:   15  16  14;   /* #0f100e  darkest surface */
+  --c-bone:    23  24  21;   /* #171815  elevated surface */
+  --bg-elev:   28  29  26;   /* #1c1d1a  cards / panels */
+
+  /* Borders and muted text */
+  --c-line:    43  44  40;   /* #2b2c28 */
+  --c-muted:  165 163 155;   /* #a5a39b  AA on #0f100e: 7.2:1 */
+
+  /* Primary text */
+  --c-ink:    242 239 231;   /* #f2efe7 */
+
+  /* Accent colours lifted for dark backgrounds (same as .surface-dark) */
+  --c-oxide:  214 104  62;   /* #d6683e  AA on #0f100e: 4.7:1 */
+  --c-brass:  214 178 110;   /* #d6b26e */
+
+  /* Status colours */
+  --c-success:  76 175 110;  /* #4caf6e */
+  --c-warning: 220 165  50;  /* #dca532 */
+  --c-danger:  220  80  74;  /* #dc504a */
+
+  color-scheme: dark;
+}
+
+/* ─────────────────────── Studio card ─────────────────────── */
+.studio-card {
+  background: rgb(var(--bg-elev));
+  border: 1px solid rgb(var(--c-line));
+}
+
+/* ─────────────────────── Keyboard shortcut pill ─────────────────────── */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  border: 1px solid rgb(var(--c-line));
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 0.6rem;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  color: rgb(var(--c-muted));
+  background: rgb(var(--c-bone));
+  line-height: 1.4rem;
+  user-select: none;
+}
+
+/* ─────────────────────── Command palette ─────────────────────── */
+.cmdk-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: clamp(4rem, 12vh, 8rem);
+  background: rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(3px);
+}
+
+.cmdk-panel {
+  position: relative;
+  background: rgb(var(--c-paper));
+  border: 1px solid rgb(var(--c-line));
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(0,0,0,0.06);
+  width: min(640px, 96vw);
+  max-height: min(560px, 80vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cmdk-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1.125rem;
+  border-bottom: 1px solid rgb(var(--c-line));
+}
+
+.cmdk-input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0.9rem 0;
+  font-size: 0.9375rem;
+  color: rgb(var(--c-ink));
+  outline: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.cmdk-input::placeholder {
+  color: rgb(var(--c-muted));
+}
+
+.cmdk-results {
+  overflow-y: auto;
+  flex: 1;
+  padding-bottom: 0.5rem;
+}
+
+.cmdk-group {
+  padding-top: 0.375rem;
+}
+
+.cmdk-group-label {
+  padding: 0.5rem 1.125rem 0.25rem;
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgb(var(--c-muted));
+  user-select: none;
+}
+
+.cmdk-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 1.125rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.08s;
+  color: rgb(var(--c-ink));
+}
+
+.cmdk-item[aria-selected="true"] {
+  background: rgb(var(--c-bone));
+}
+
+.cmdk-item--locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cmdk-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: rgb(var(--c-muted));
+  flex-shrink: 0;
+}
+
+.cmdk-item-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cmdk-item-meta {
+  font-size: 0.65rem;
+  color: rgb(var(--c-muted));
+  flex-shrink: 0;
+}
+
+.cmdk-empty {
+  padding: 2.5rem 1.125rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: rgb(var(--c-muted));
+}
+
+.cmdk-footer {
+  border-top: 1px solid rgb(var(--c-line));
+  padding: 0.5rem 1.125rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.6rem;
+  color: rgb(var(--c-muted));
+}
+
+/* ─────────────────────── Nav badge ─────────────────────── */
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: rgb(178 74 36); /* AA: white on #b24a24 = 5.1:1, also on the dark sidebar */
+  color: #ffffff;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+/* ─────────────────────── Studio skeleton ─────────────────────── */
+@keyframes studio-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.studio-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--c-bone)) 0%,
+    rgb(var(--bg-elev)) 50%,
+    rgb(var(--c-bone)) 100%
+  );
+  background-size: 200% 100%;
+  animation: studio-shimmer 1.6s ease-in-out infinite;
+}
+
+/* ─────────────────────── Collapsed sidebar ─────────────────────── */
+.sidebar-collapsed .sidebar-label,
+.sidebar-collapsed .sidebar-section-title,
+.sidebar-collapsed .sidebar-footer-text {
+  display: none;
+}
+
+.sidebar-collapsed .sidebar-logo-text {
+  display: none;
+}
+
+/* ─────────────────────── Reduced motion overrides ─────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .studio-skeleton {
+    animation: none;
+  }
+}

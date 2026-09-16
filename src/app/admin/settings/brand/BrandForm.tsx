@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { CsrfInput } from "@/components/admin/Csrf";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -39,6 +41,9 @@ export function BrandForm({ values, csrf }: { values: BrandValues; csrf: string 
   const [name, setName] = useState(values.name);
   const [useBuiltIn, setUseBuiltIn] = useState(!values.logoUrl);
 
+  /* Brand settings are the seed for the built-in theme only. When a custom
+     Theme is active (set in Settings → Themes), it overrides these values. */
+
   useEffect(() => {
     if (state.error) toast.error(state.error);
     else if (state.ok && state.message) toast.success(state.message);
@@ -48,6 +53,18 @@ export function BrandForm({ values, csrf }: { values: BrandValues; csrf: string 
     <form action={action} className="grid gap-5 xl:grid-cols-3">
       <CsrfInput value={csrf} />
       {useBuiltIn && <input type="hidden" name="logoUrl" value="" />}
+
+      {/* Theme notice */}
+      <div className="xl:col-span-3 flex items-start gap-3 rounded border border-oxide/30 bg-oxide/5 px-4 py-3 text-sm">
+        <span className="shrink-0 text-oxide">ℹ</span>
+        <span className="text-muted">
+          Colours, fonts and layout are managed under{" "}
+          <Link href="/admin/settings/themes" className="text-oxide underline-offset-2 hover:underline">
+            Settings → Themes
+          </Link>
+          . The values on this page seed the <strong>built-in ORYNVE theme</strong>. When a custom theme is active, Themes settings take precedence.
+        </span>
+      </div>
 
       <div className="space-y-5 xl:col-span-2">
         <Section title="Identity">

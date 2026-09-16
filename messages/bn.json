@@ -58,7 +58,12 @@
     "enter": "ORYNVE-এ প্রবেশ করুন",
     "skipIntro": "এড়িয়ে যান",
     "machineTranslated": "এই ভাষাটি স্বয়ংক্রিয়ভাবে অনূদিত এবং পর্যালোচনাধীন। ভুল পেলে আমাদের জানান।",
-    "languages": "ভাষা"
+    "languages": "ভাষা",
+    "themeLight": "লাইট",
+    "themeDark": "ডার্ক",
+    "themeBlack": "ব্ল্যাক",
+    "themeSystem": "ডিভাইস অনুযায়ী",
+    "appearance": "অ্যাপিয়ারেন্স"
   },
   "nav": {
     "shop": "শপ",
